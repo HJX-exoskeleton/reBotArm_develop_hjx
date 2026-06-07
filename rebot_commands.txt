@@ -1,0 +1,44 @@
+安装所有依赖
+git clone https://github.com/vectorBH6/reBotArm_control_py.git
+cd reBotArm_control_py
+uv sync
+
+++++++++++++++++++++++++++++++++++++++++++++
+pip install h5py tqdm
+# 告诉 uv 把 h5py 和 tqdm 塞进当前项目的虚拟环境里
+uv add h5py tqdm
+++++++++++++++++++++++++++++++++++++++++++++
+
+# 在终端激活环境的指令
+source .venv/bin/activate
+# 在Pycharm激活环境的方式
+Add: /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_control_py/.venv/bin/python
+
+
+配置验证：
+# 检查设备
+ls /dev/ttyACM0
+
+# 扫描电机
+motorbridge-cli scan --vendor damiao --transport dm-serial --serial-port /dev/ttyACM0 --serial-baud 921600
+
+重力补偿控制 (gravity_compensation)
+uv run python gravity_compensation/rebot_gravity_compensation_control.py
+
+数据采集与轨迹重播：
+python rebot_gravity_compensation_record_data.py --task_name test_task --save_dir ./collected_data --rate 50 --time 10 --episode_idx 0
+python rebot_position_replay.py --task_name test_task --dataset_dir ./collected_data/test_task/episode_0.hdf5 --episode_idx 0
+python visualize_data.py --dataset_dir /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/gravity_compensation/collected_data/test_task --episode_idx 0
+
+===================================================================================
+# mujoco real2sim
+cd reBotArm_develop_hjx
+python mujoco/rebot_mujoco_real2sim_gravity_compensation.py
+
+# mujoco sim2real
+uv run python mujoco/rebot_mujoco_sim2real_position_setting.py --start-from-keyframe --calibrate-current-as-keyframe
+uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --sim-only
+uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --start-from-keyframe --calibrate-current-as-keyframe
+===================================================================================
+
+
