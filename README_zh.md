@@ -185,7 +185,7 @@ uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --start-from-keyfram
 ```
 **输出**：运行real2sim以及sim2real代码将会出现mujoco仿真画面
 
-![image](https://github.com/reBotArm_develop_hjx/image/rebot_mujoco.jpg)
+![image](https://github.com/HJX-exoskeleton/reBotArm_develop_hjx/blob/master/image/rebot_mujoco.jpg)
 
 ---
 
