@@ -17,7 +17,7 @@
 
 ## 📖 项目简介
 
-**reBotArm develop** 是一个面向 reBot Arm B601 系列机械臂的 Python 二次开发项目，由hjx作者创建。
+**reBotArm develop** 是一个面向 reBot Arm B601 系列机械臂的 Python 二次开发项目，由[hjx](https://hjx-exoskeleton.github.io/)作者创建。
 
 ### ✨ 核心特性
 
