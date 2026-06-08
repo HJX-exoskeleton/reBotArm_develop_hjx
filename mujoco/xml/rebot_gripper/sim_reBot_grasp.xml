@@ -1,0 +1,37 @@
+<mujoco model="reBot-DevArm_gripper">
+<!--  <compiler angle="radian" inertiafromgeom="auto" inertiagrouprange="4 5"/>-->
+<!--  <option timestep='0.0025' iterations="50" tolerance="1e-10" solver="Newton" jacobian="dense" cone="elliptic"/>-->
+
+  <include file="reBot-DevArm_gripper.xml"/>
+
+  <worldbody>
+
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="-1 -1 1" dir="1 1 -1"/>
+    <light directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="1 -1 1" dir="-1 1 -1"/>
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="0 1 1" dir="0 -1 -1"/>
+
+    <!-- floor -->
+    <body name="floor" pos="0 0 0">
+      <geom friction="1.0 .1 .1" material="MatPlane" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>
+<!--      <geom friction="1.0 .1 .1" material="light_wood" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>-->
+    </body>
+
+    <body name="mocap_target" pos="0.255 0 0.19" euler="0 0 0" mocap="true">
+      <geom type="box" size=".02 .02 .02" contype="0" conaffinity="0" rgba=".6 .3 .3 .2"/>
+    </body>
+
+    <body name="box" pos="0.5 0.0 0.05">
+      <joint name="red_box_joint" type="free" frictionloss="0.01" />
+      <inertial pos="0 0 0" mass="0.025" diaginertia="0.002 0.002 0.002" />
+      <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0 0 0" size="0.02 0.02 0.02" type="box" name="red_box" rgba="1 0 0 1" />
+    </body>
+
+  </worldbody>
+
+  <keyframe>
+<!--      <key qpos="0 0 0 0 0 0 0 0"/>-->
+      <key qpos="0 0 0 0 0 0 0 0
+                 0.5 0.0 0.05 1 0 0 0"/>
+  </keyframe>
+
+</mujoco>

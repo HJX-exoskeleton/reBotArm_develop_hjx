@@ -4,9 +4,9 @@ cd reBotArm_control_py
 uv sync
 
 ++++++++++++++++++++++++++++++++++++++++++++
-pip install h5py tqdm scipy
+pip install h5py tqdm scipy mink
 # 告诉 uv 把 h5py 和 tqdm 塞进当前项目的虚拟环境里
-uv add h5py tqdm
+uv add h5py tqdm scipy mink
 ++++++++++++++++++++++++++++++++++++++++++++
 
 # 在终端激活环境的指令
