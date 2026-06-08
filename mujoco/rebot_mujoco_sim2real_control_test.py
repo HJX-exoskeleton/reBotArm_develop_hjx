@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # --------------------------------------------------------------------------- #
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "reBot-DevArm_fixend.xml"
+DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_fixend" / "reBot-DevArm_fixend.xml"
 DEFAULT_JOINT_NAMES = tuple(f"joint{i}" for i in range(1, 7))
 
 # 保护参数偏保守；需要更快跟踪时优先调大命令行参数，而不是改硬编码。

@@ -1,0 +1,195 @@
+<mujoco model="reBot-DevArm_gripper">
+<!--  <compiler angle="radian"/>-->
+  <compiler angle="radian" inertiafromgeom="auto" inertiagrouprange="4 5"/>
+  <option timestep='0.0025' iterations="50" tolerance="1e-10" solver="Newton" jacobian="dense" cone="elliptic"/>
+
+
+  <asset>
+    <mesh name="base_link" file="base_link.STL" scale="1 1 1"/>
+    <mesh name="link1" file="link1.STL" scale="1 1 1"/>
+    <mesh name="link2" file="link2.STL" scale="1 1 1"/>
+    <mesh name="link3" file="link3.STL" scale="1 1 1"/>
+    <mesh name="link4" file="link4.STL" scale="1 1 1"/>
+    <mesh name="link5" file="link5.STL" scale="1 1 1"/>
+    <mesh name="link6" file="link6.STL" scale="1 1 1"/>
+    <mesh name="gripper_base" file="gripper_base.stl" scale="1 1 1"/>
+    <mesh name="vx300s_10_gripper_finger_left" file="vx300s_10_custom_finger_left.stl" scale="0.001 0.001 0.001" />
+    <mesh name="vx300s_10_gripper_finger_right" file="vx300s_10_custom_finger_right.stl" scale="0.001 0.001 0.001" />
+
+    <!-- floor -->
+    <texture builtin="checker" height="100" name="texplane" rgb1="0.6 0.6 0.6" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
+    <!-- wood -->
+    <texture type="2d" file="wood.png"/>
+    <material name="wood" texture="wood"/>
+    <!-- light_wood -->
+    <texture type="2d" file="light_wood.png"/>
+    <material name="light_wood" texture="light_wood"/>
+    <!-- marble -->
+    <texture type="2d" file="marble.png"/>
+    <material name="marble" texture="marble"/>
+    <!-- metal -->
+    <texture type="2d" file="metal.png"/>
+    <material name="metal" texture="metal"/>
+    <!-- carpet-black -->
+    <texture type="2d" file="carpet-black.png"/>
+    <material name="carpet-black" texture="carpet-black"/>
+    <!-- 设置天空盒纹理 -->
+    <texture type="skybox" file="desert.png" gridsize="3 4" gridlayout=".U..LFRB.D.." />
+  </asset>
+
+  <default>
+    <default class="rebot_joint_1">
+      <joint damping="8"/>
+    </default>
+    <default class="rebot_joint_2">
+      <joint damping="8"/>
+    </default>
+    <default class="rebot_joint_3">
+      <joint damping="6"/>
+    </default>
+    <default class="rebot_joint_4">
+      <joint damping="5"/>
+    </default>
+    <default class="rebot_joint_5">
+      <joint damping="3"/>
+    </default>
+    <default class="rebot_joint_6">
+      <joint damping="3"/>
+    </default>
+    <default class="gripper">
+      <joint damping="0.5"/>
+    </default>
+  </default>
+
+  <visual>
+    <map fogstart="1.5" fogend="5" force="0.1" znear="0.1"/>
+    <quality shadowsize="4096" offsamples="4"/>
+    <headlight ambient="0.4 0.4 0.4"/>
+  </visual>
+
+  <worldbody>
+
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="-1 -1 1" dir="1 1 -1"/>
+    <light directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="1 -1 1" dir="-1 1 -1"/>
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="0 1 1" dir="0 -1 -1"/>
+
+    <!-- floor -->
+    <body name="floor" pos="0 0 0">
+<!--      <geom friction="1.0 .1 .1" material="MatPlane" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>-->
+      <geom friction="1.0 .1 .1" material="light_wood" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>
+    </body>
+
+    <!-- rebot -->
+    <body name="base_link" pos="0 0 0">
+      <geom type="mesh" rgba="0.62745 0.62745 0.62745 1" mesh="base_link" material="metal"/>
+
+      <body name="link1" pos="-8.416e-05 0 0.08465">
+        <inertial pos="0.000113615 -0.00061632 0.0236476" quat="0.672066 0.672066 0.219836 -0.219836" mass="0.1613" diaginertia="0.000272817 0.000213413 0.00015464"/>
+        <joint name="joint1" class="rebot_joint_1" pos="0 0 0" axis="0 0 1" range="-2.8 2.8" actuatorfrcrange="-27 27"/>
+        <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link1" material="metal"/>
+
+        <body name="link2" pos="0.020084 0.031625 0.05555" quat="0.707105 -0.707108 0 0">
+          <inertial pos="-0.132256 -0.0030617 -0.0308307" quat="0.00176765 0.707354 0.00179466 0.706855" mass="1.3266" diaginertia="0.0128139 0.0125599 0.000733734"/>
+          <joint name="joint2" class="rebot_joint_2" pos="0 0 0" axis="0 0 -1" range="-3.14 0" actuatorfrcrange="-27 27"/>
+          <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link2" material="metal"/>
+
+          <body name="link3" pos="-0.264 0 0">
+            <inertial pos="0.12104 -0.0536211 -0.0310138" quat="-0.00138181 0.704593 0.00278372 0.709605" mass="0.8353" diaginertia="0.00648251 0.00632715 0.000467564"/>
+            <joint name="joint3" class="rebot_joint_3" pos="0 0 0" axis="0 0 1" range="-3.14 0" actuatorfrcrange="-27 27"/>
+            <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link3" material="metal"/>
+
+            <body name="link4" pos="0.2426 -0.054 -0.001625">
+              <inertial pos="0.0608201 -0.0511712 -0.0302995" quat="0.619751 0.601248 0.365808 0.347267" mass="0.52" diaginertia="0.000889485 0.000667165 0.000323211"/>
+              <joint name="joint4" class="rebot_joint_4" pos="0 0 0" axis="0 0 1" range="-1.87 1.57" actuatorfrcrange="-7 7"/>
+              <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link4" material="metal"/>
+
+              <body name="link5" pos="0.078308 -0.0375 -0.03" quat="0.707105 -0.707108 0 0">
+                <inertial pos="-0.00502802 1.73866e-06 0.0386233" quat="0.644154 0.196994 0.180566 0.716697" mass="0.383" diaginertia="0.000217429 0.000212237 0.000157335"/>
+                <joint name="joint5" class="rebot_joint_5" pos="0 0 0" axis="0 0 1" range="-1.57 1.57" actuatorfrcrange="-7 7"/>
+                <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link5" material="metal"/>
+
+                <body name="link6" pos="0.028008 0 0.04" quat="0.707105 0 0.707108 0">
+                  <inertial pos="5.50089e-06 -3.71802e-05 0.0578217" quat="0.999981 -0.00127532 -0.000304602 -0.00594064" mass="0.8663" diaginertia="0.00127909 0.000983777 0.000513199"/>
+                  <joint name="joint6" class="rebot_joint_6" pos="0 0 0" axis="0 0 1" range="-3.14 3.14" actuatorfrcrange="-7 7"/>
+                  <geom type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="link6" material="metal"/>
+                  <geom pos="0 0 0.15539" quat="3.27579e-05 0.707108 -3.27581e-05 0.707105" type="mesh" rgba="0.627451 0.627451 0.627451 1" mesh="gripper_base" material="metal"/>
+
+                  <body name="camera_focus" pos="0.01 0 0.15">
+                    <site pos="0 0 0" size="0.01" type="sphere" name="left_cam_focus" rgba="0 0 1 0"/>
+                  </body>
+                  <site pos="0.0 0 0.15" size="0.003 0.003 0.03" type="box" name="cali_left_site1" rgba="0 0 1 0"/>
+                  <site pos="0.0 0 0.15" size="0.003 0.03 0.003" type="box" name="cali_left_site2" rgba="0 0 1 0"/>
+                  <site pos="0.0 0 0.15" size="0.03 0.003 0.003" type="box" name="cali_left_site3" rgba="0 0 1 0"/>
+
+                  <camera name="cam_wrist" pos="0.6 0 -0.31" fovy="20" mode="fixed" euler="3.14 0.8 -1.5707" />
+
+                  <!-- New add eef_trace_site -->
+                  <body name="gripper_eef_trace_site" pos="0 0 0.15">
+                    <geom contype="0" conaffinity="0" size="0.004" type="sphere" rgba="0.2 0.2 0.2 0.2"/>
+                    <site name="eef_trace_site" pos="0.0 0 0" size="0.004" rgba="1 0.5 0 1" type="sphere"/>
+                  </body>
+
+                  <body name="left_finger_link" pos="-0.005 0.078 0.076">
+                    <inertial pos="0.017344 -0.0060692 0" quat="0.449364 0.449364 -0.54596 -0.54596" mass="0.034796" diaginertia="2.48003e-05 1.417e-05 1.20797e-05" />
+                    <joint name="left_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.005" frictionloss="30" />
+                    <geom name="left_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 -0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_left" material="carpet-black"/>
+                  </body>
+
+                  <body name="right_finger_link" pos="-0.005 -0.078 0.076">
+                    <inertial pos="0.017344 0.0060692 0" quat="0.44937 -0.44937 0.545955 -0.545955" mass="0.034796" diaginertia="2.48002e-05 1.417e-05 1.20798e-05" />
+                    <joint name="right_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.005" frictionloss="30" />
+                    <geom name="right_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_right" material="carpet-black"/>
+                  </body>
+
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+
+    <body name="box" pos="0.5 0.0 0.05">
+      <joint name="red_box_joint" type="free" frictionloss="0.01" />
+      <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
+      <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0 0 0" size="0.02 0.02 0.02" type="box" name="red_box" rgba="1 0 0 1" />
+    </body>
+
+  </worldbody>
+
+  <contact>
+    <exclude body1="link1" body2="base_link"/>
+    <exclude body1="link2" body2="link4"/>
+    <exclude body1="link4" body2="link6"/>
+  </contact>
+
+  <tendon>
+    <fixed name="gripper_tendon">
+      <joint joint="left_finger" coef="-1"/>
+      <joint joint="right_finger" coef="1"/>
+    </fixed>
+  </tendon>
+
+  <actuator>
+    <position ctrllimited="true" ctrlrange="-1.87 1.87" joint="joint1" kp="800"  user="1" forcelimited="true" forcerange="-150 150"/>
+    <position ctrllimited="true" ctrlrange="-3.14 0" joint="joint2" kp="800"  user="1" forcelimited="true" forcerange="-100 100"/>
+    <position ctrllimited="true" ctrlrange="-3.14 0" joint="joint3" kp="10"  user="1" forcelimited="true" forcerange="-100 100"/>
+    <position ctrllimited="true" ctrlrange="-1.87 1.57" joint="joint4" kp="50"  user="1"/>
+    <position ctrllimited="true" ctrlrange="-1.57 1.57" joint="joint5" kp="20"  user="1"/>
+    <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint6" kp="200" user="1"/>
+
+<!--    <position ctrllimited="true" ctrlrange="-0.5 0.0" joint="left_finger" kp="200"  user="1"/>-->
+<!--    <position ctrllimited="true" ctrlrange="0.0 0.5" joint="right_finger" kp="200"  user="1"/>-->
+    <position ctrllimited="true" ctrlrange="0 0.5" tendon="gripper_tendon" kp="200"  name="gripper_actuator"/>
+  </actuator>
+
+
+  <keyframe>
+<!--      <key qpos="0 0 0 0 0 0 0 0"/>-->
+      <key qpos="0 0 0 0 0 0 0 0
+                 0.5 0.0 0.05 1 0 0 0"/>
+  </keyframe>
+
+</mujoco>

@@ -196,8 +196,9 @@ uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --start-from-keyfram
 
 ## 参考项目
 
-- **reBot Arm B601-DM 的 Pinocchio 与 MeshCat 入门指南**: [reBotArm_control_py](https://github.com/vectorBH6/reBotArm_control_py)
 - **reBot-DevArm: 为每个开发者开源的机械臂**: [reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm)
+- **reBot Arm B601-DM 的 Pinocchio 与 MeshCat 入门指南**: [reBotArm_control_py](https://github.com/vectorBH6/reBotArm_control_py)
+- **reBot Arm B601-DM Web Simulator**: [Rebot-Arm](https://github.com/Yang-Ci/Rebot-Arm)
 
 ---
 

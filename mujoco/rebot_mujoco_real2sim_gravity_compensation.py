@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # --------------------------------------------------------------------------- #
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "reBot-DevArm_fixend.xml"
+DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_fixend" / "reBot-DevArm_fixend.xml"
 DEFAULT_JOINT_NAMES = tuple(f"joint{i}" for i in range(1, 7))
 
 # 与 9_gravity_compensation_hjx.py 保持一致的重力补偿参数。

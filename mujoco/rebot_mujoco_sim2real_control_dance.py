@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # 配置参数
 # --------------------------------------------------------------------------- #
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "reBot-DevArm_fixend.xml"
+DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_fixend" / "reBot-DevArm_fixend.xml"
 DEFAULT_JOINT_NAMES = tuple(f"joint{i}" for i in range(1, 7))
 
 DEFAULT_CMD_VLIM = np.array([1.5, 1.5, 1.5, 3.0, 3.0, 3.0])
