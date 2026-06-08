@@ -295,8 +295,9 @@ def main() -> None:
                 elapsed = time.perf_counter() - t0
                 if elapsed < period:
                     time.sleep(period - elapsed)
-                else:
-                    print(f"⚠️  控制循环超时: {elapsed * 1000:.1f}ms > {period * 1000:.1f}ms")
+                elif elapsed > period + 0.010:  # 💡 容忍 10ms (0.01s) 的系统抖动
+                    # 只有当耗时超出预期 10ms 以上时，才触发警告
+                    print(f"⚠️  控制循环严重超时: 耗时 {elapsed * 1000:.1f}ms (预期 {period * 1000:.1f}ms)")
 
     except KeyboardInterrupt:
         _running = False
@@ -319,3 +320,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# python rebot_mujoco_real2sim_gravity_compensation_grasp.py --rate 200
