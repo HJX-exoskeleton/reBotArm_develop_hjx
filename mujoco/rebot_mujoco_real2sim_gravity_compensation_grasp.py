@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # 配置参数
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_gripper" / "reBot-DevArm_gripper.xml"
+DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_gripper" / "sim_reBot_grasp.xml"
 DEFAULT_JOINT_NAMES = tuple(f"joint{i}" for i in range(1, 7))
 DEFAULT_GRIPPER_CFG = ROOT_DIR / "config" / "gripper.yaml"
 
