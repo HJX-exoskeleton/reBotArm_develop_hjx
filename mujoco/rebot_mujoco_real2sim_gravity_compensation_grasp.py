@@ -295,8 +295,8 @@ def main() -> None:
                 elapsed = time.perf_counter() - t0
                 if elapsed < period:
                     time.sleep(period - elapsed)
-                elif elapsed > period + 0.010:  # 💡 容忍 10ms (0.01s) 的系统抖动
-                    # 只有当耗时超出预期 10ms 以上时，才触发警告
+                elif elapsed > period + 0.050:  # 💡 容忍 50ms (0.05s) 的系统抖动
+                    # 只有当耗时超出预期 50ms 以上时，才触发警告
                     print(f"⚠️  控制循环严重超时: 耗时 {elapsed * 1000:.1f}ms (预期 {period * 1000:.1f}ms)")
 
     except KeyboardInterrupt:
