@@ -175,6 +175,7 @@ uv run python gravity_compensation/rebot_gravity_compensation_control.py
 # mujoco real2sim
 cd reBotArm_develop_hjx
 python mujoco/rebot_mujoco_real2sim_gravity_compensation.py
+python mujoco/rebot_mujoco_real2sim_gravity_compensation_grasp.py --rate 200
 
 # mujoco sim2real
 uv run python mujoco/rebot_mujoco_sim2real_position_setting.py --start-from-keyframe --calibrate-current-as-keyframe
