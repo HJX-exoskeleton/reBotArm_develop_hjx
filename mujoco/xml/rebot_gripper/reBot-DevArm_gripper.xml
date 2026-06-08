@@ -83,10 +83,10 @@
       -->
       <position ctrlrange="0.001 0.05" kp="2000" kv="124"/>
       <default class="left_finger">
-        <joint range="0 0.051" axis="0 -1 0" frictionloss="1" limited="true"/>
+        <joint range="0 0.051" axis="0 -1 0" frictionloss="1" limited="true" damping="50"/>
       </default>
       <default class="right_finger">
-        <joint range="0 0.051" axis="0 1 0" frictionloss="1" limited="true"/>
+        <joint range="0 0.051" axis="0 1 0" frictionloss="1" limited="true" damping="50"/>
       </default>
     </default>
 
@@ -164,14 +164,14 @@
                     <inertial pos="0.017344 -0.0060692 0" quat="0.449364 0.449364 -0.54596 -0.54596" mass="0.034796" diaginertia="2.48003e-05 1.417e-05 1.20797e-05" />
 <!--                    <joint name="left_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.035" frictionloss="30" />-->
                      <joint name="left_finger" class="left_finger"/>
-                    <geom name="left_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 -0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_left" material="carpet-black"/>
+                    <geom name="left_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1.5 0.3 0.1" pos="0.005 -0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_left" material="carpet-black"/>
                   </body>
 
                   <body name="right_finger_link" pos="-0.005 -0.078 0.076">
                     <inertial pos="0.017344 0.0060692 0" quat="0.44937 -0.44937 0.545955 -0.545955" mass="0.034796" diaginertia="2.48002e-05 1.417e-05 1.20798e-05" />
 <!--                    <joint name="right_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.035" frictionloss="30" />-->
                     <joint name="right_finger" class="right_finger"/>
-                    <geom name="right_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_right" material="carpet-black"/>
+                    <geom name="right_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1.5 0.3 0.1" pos="0.005 0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_right" material="carpet-black"/>
                   </body>
 
                 </body>
