@@ -57,9 +57,6 @@
     <default class="rebot_joint_6">
       <joint damping="2"/>
     </default>
-<!--    <default class="gripper">-->
-<!--      <joint damping="0.5"/>-->
-<!--    </default>-->
 
     <default class="finger">
       <joint type="slide" armature="0.243" damping="40"/>
@@ -209,7 +206,7 @@
     <position ctrllimited="true" ctrlrange="-1.57 1.57" joint="joint5" kp="600"  user="1" forcelimited="true" forcerange="-100 100"/>
     <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint6" kp="600" user="1" forcelimited="true" forcerange="-100 100"/>
 
-    <position class="finger" name="gripper" joint="left_finger"/>
+    <position class="finger" name="gripper" joint="left_finger" user="1" forcelimited="true" forcerange="-100 100"/>
   </actuator>
 
 
