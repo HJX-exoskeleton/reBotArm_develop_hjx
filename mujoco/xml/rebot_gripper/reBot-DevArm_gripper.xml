@@ -204,7 +204,7 @@
   <actuator>
     <position ctrllimited="true" ctrlrange="-1.87 1.87" joint="joint1" kp="800"  user="1" forcelimited="true" forcerange="-150 150"/>
     <position ctrllimited="true" ctrlrange="-3.14 0" joint="joint2" kp="800"  user="1" forcelimited="true" forcerange="-100 100"/>
-    <position ctrllimited="true" ctrlrange="-3.14 0" joint="joint3" kp="10"  user="1" forcelimited="true" forcerange="-100 100"/>
+    <position ctrllimited="true" ctrlrange="-3.14 0" joint="joint3" kp="600"  user="1" forcelimited="true" forcerange="-100 100"/>
     <position ctrllimited="true" ctrlrange="-1.87 1.57" joint="joint4" kp="50"  user="1"/>
     <position ctrllimited="true" ctrlrange="-1.57 1.57" joint="joint5" kp="20"  user="1"/>
     <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint6" kp="200" user="1"/>
