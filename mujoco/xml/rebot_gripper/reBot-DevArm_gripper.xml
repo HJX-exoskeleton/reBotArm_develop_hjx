@@ -179,6 +179,9 @@
       </body>
     </body>
 
+    <body name="mocap_target" pos="0.255 0 0.19" quat="0 1 0 0" mocap="true">
+      <geom type="box" size=".025 .025 .025" contype="0" conaffinity="0" rgba=".6 .3 .3 .2"/>
+    </body>
 
     <body name="box" pos="0.5 0.0 0.05">
       <joint name="red_box_joint" type="free" frictionloss="0.01" />
