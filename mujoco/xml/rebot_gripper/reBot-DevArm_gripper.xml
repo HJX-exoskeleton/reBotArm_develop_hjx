@@ -182,7 +182,7 @@
 
     <body name="box" pos="0.5 0.0 0.05">
       <joint name="red_box_joint" type="free" frictionloss="0.01" />
-      <inertial pos="0 0 0" mass="0.05" diaginertia="0.002 0.002 0.002" />
+      <inertial pos="0 0 0" mass="0.025" diaginertia="0.002 0.002 0.002" />
       <geom condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0 0 0" size="0.02 0.02 0.02" type="box" name="red_box" rgba="1 0 0 1" />
     </body>
 
@@ -206,7 +206,7 @@
     <position ctrllimited="true" ctrlrange="-1.57 1.57" joint="joint5" kp="600"  user="1" forcelimited="true" forcerange="-100 100"/>
     <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint6" kp="600" user="1" forcelimited="true" forcerange="-100 100"/>
 
-    <position class="finger" name="gripper" joint="left_finger" user="1" forcelimited="true" forcerange="-100 100"/>
+    <position class="finger" name="gripper" joint="left_finger" user="1" forcelimited="true" forcerange="-50 50"/>
   </actuator>
 
 
