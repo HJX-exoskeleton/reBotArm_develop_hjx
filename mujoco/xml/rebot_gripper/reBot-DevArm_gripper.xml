@@ -60,6 +60,36 @@
     <default class="gripper">
       <joint damping="0.5"/>
     </default>
+
+    <default class="finger">
+      <joint type="slide" armature="0.243" damping="40"/>
+      <!--
+        The joint and control ranges are in meters, representing the linear displacement of the
+        finger on the rail. Note that the real robot takes in a float value representing the
+        position of the dynamixel servo, which actuates rotors and moves the fingers along the
+        the rail. We choose to model the displacement of the finger on the rail instead of the
+        position of the servo because the former is a more interpretable value.
+
+        Joint range should be (0.0cm, 5.1cm). This represents the _physical_ limits of the
+        fingers sliding along the rail. The 0 position represents when the inner edge of
+        the finger bases are touching each other at exactly the center of the rail.
+        4.1cm represents the outer edge of the finger bases touching the edge of the rail.
+        So the value always represents the distance from the inner edge of the finger base
+        to the center of the rail.
+
+        Control range is (0.1cm, 5cm). This represents measured values from a real robot
+        where the gripper is actuated to its fully closed and fully open positions. Therefore the
+        control range represents limits enforced by _software_ on the real robot.
+      -->
+      <position ctrlrange="0.001 0.05" kp="2000" kv="124"/>
+      <default class="left_finger">
+        <joint range="0 0.051" axis="0 -1 0" frictionloss="10"/>
+      </default>
+      <default class="right_finger">
+        <joint range="0 0.051" axis="0 1 0" frictionloss="10"/>
+      </default>
+    </default>
+
   </default>
 
   <visual>
@@ -132,13 +162,15 @@
 
                   <body name="left_finger_link" pos="-0.005 0.078 0.076">
                     <inertial pos="0.017344 -0.0060692 0" quat="0.449364 0.449364 -0.54596 -0.54596" mass="0.034796" diaginertia="2.48003e-05 1.417e-05 1.20797e-05" />
-                    <joint name="left_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.005" frictionloss="30" />
+<!--                    <joint name="left_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.035" frictionloss="30" />-->
+                     <joint name="left_finger" class="left_finger"/>
                     <geom name="left_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 -0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_left" material="carpet-black"/>
                   </body>
 
                   <body name="right_finger_link" pos="-0.005 -0.078 0.076">
                     <inertial pos="0.017344 0.0060692 0" quat="0.44937 -0.44937 0.545955 -0.545955" mass="0.034796" diaginertia="2.48002e-05 1.417e-05 1.20798e-05" />
-                    <joint name="right_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.005" frictionloss="30" />
+<!--                    <joint name="right_finger" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="0.0 0.035" frictionloss="30" />-->
+                    <joint name="right_finger" class="right_finger"/>
                     <geom name="right_gripper_finger" condim="4" solimp="2 1 0.01" solref="0.01 1" friction="1 0.005 0.0001" pos="0.005 0.052 0" euler="0 0 0" type="mesh" mesh="vx300s_10_gripper_finger_right" material="carpet-black"/>
                   </body>
 
@@ -165,12 +197,9 @@
     <exclude body1="link4" body2="link6"/>
   </contact>
 
-  <tendon>
-    <fixed name="gripper_tendon">
-      <joint joint="left_finger" coef="-1"/>
-      <joint joint="right_finger" coef="1"/>
-    </fixed>
-  </tendon>
+  <equality>
+    <joint joint1="left_finger" joint2="right_finger" polycoef="0 1 0 0 0"/>
+  </equality>
 
   <actuator>
     <position ctrllimited="true" ctrlrange="-1.87 1.87" joint="joint1" kp="800"  user="1" forcelimited="true" forcerange="-150 150"/>
@@ -180,9 +209,7 @@
     <position ctrllimited="true" ctrlrange="-1.57 1.57" joint="joint5" kp="20"  user="1"/>
     <position ctrllimited="true" ctrlrange="-3.14 3.14" joint="joint6" kp="200" user="1"/>
 
-<!--    <position ctrllimited="true" ctrlrange="-0.5 0.0" joint="left_finger" kp="200"  user="1"/>-->
-<!--    <position ctrllimited="true" ctrlrange="0.0 0.5" joint="right_finger" kp="200"  user="1"/>-->
-    <position ctrllimited="true" ctrlrange="0 0.5" tendon="gripper_tendon" kp="200"  name="gripper_actuator"/>
+    <position class="finger" name="gripper" joint="left_finger"/>
   </actuator>
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from reBotArm_control_py.actuator import RobotArm
+from ..reBotArm_control_py.actuator import RobotArm
 
 
 def mit_controller(ref, dt):
