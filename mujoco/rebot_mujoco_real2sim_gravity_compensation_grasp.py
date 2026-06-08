@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""reBotArm 重力补偿 + MuJoCo real2sim 数字孪生 (7轴全物理拖拽示教版)。
-
-功能特性:
-1. 1-6 轴运行 MIT 模式重力补偿，支持零力拖拽。
-2. 第 7 轴（夹爪）运行 MIT 零力矩模式（纯软化），支持手动开合。
-3. 仿真系统实时读取 1-7 轴的真实物理反馈，并在 MuJoCo 窗口中 1:1 同步再现。
-"""
-
-from __future__ import annotations
+"""reBotArm 重力补偿 + MuJoCo real2sim 数字孪生 (7轴全物理拖拽示教版)。"""
 
 import argparse
 import importlib.util
@@ -23,19 +15,18 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# --------------------------------------------------------------------------- #
 # 配置参数
-# --------------------------------------------------------------------------- #
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_XML = ROOT_DIR / "mujoco" / "xml" / "rebot_gripper" / "reBot-DevArm_gripper.xml"
 DEFAULT_JOINT_NAMES = tuple(f"joint{i}" for i in range(1, 7))
 DEFAULT_GRIPPER_CFG = ROOT_DIR / "config" / "gripper.yaml"
 
-# 【标定参数】：用于将真机弧度(rad)转换为仿真位移(m)
+# 夹爪标定参数
 GRIPPER_MOTOR_NAME = "gripper"
-# 假设真机夹爪全开是 0.8 rad，仿真全开是 0.035 m
-GRIPPER_REAL_MAX_RAD = 1.8
-GRIPPER_SIM_MAX_METER = 0.5
+GRIPPER_REAL_CLOSED_RAD = 0.0  # 真机闭合角度
+GRIPPER_REAL_OPEN_RAD = -5.8  # 真机张开角度
+GRIPPER_SIM_CLOSED_METER = 0.001  # 仿真闭合位置
+GRIPPER_SIM_OPEN_METER = 0.05  # 仿真张开位置
 
 TORQUE_LIMITS = np.array([10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
 KD_CONFIG = np.array([1.0, 2.0, 1.5, 1.0, 0.8, 0.6])
@@ -100,7 +91,6 @@ class RealToSimMapper:
         for i, act_id in enumerate(self.actuator_ids):
             if act_id is not None:
                 data.ctrl[act_id] = float(q_sim[i])
-        mujoco.mj_forward(self.model, data)
         return q_sim
 
 
@@ -131,7 +121,6 @@ def make_gravity_compensation_controller(state: GravityCompensationState, comput
         tau_g = compute_generalized_gravity(q=q_arm_6d) * GRAVITY_SCALES[:6]
         tau_g_safe = np.clip(tau_g, -TORQUE_LIMITS[:6], TORQUE_LIMITS[:6])
 
-        # 1. 逐个对前 6 轴底层电机下发 MIT 重力补偿
         for i, jname in enumerate(DEFAULT_JOINT_NAMES):
             try:
                 mot = arm._motor_map.get(jname)
@@ -140,16 +129,13 @@ def make_gravity_compensation_controller(state: GravityCompensationState, comput
             except Exception:
                 pass
 
-        # 2. 🚨【核心修改】对第 7 轴（夹爪）下发纯 0 力矩的 MIT 指令，使其保持软绵绵状态
         try:
             mot_g = arm._motor_map.get(GRIPPER_MOTOR_NAME)
             if mot_g:
-                # pos=0, vel=0, kp=0, kd=0, tau=0 -> 完全失去刚度，任人拖拽
                 mot_g.send_mit(0.0, 0.0, 0.0, 0.0, 0.0)
         except Exception:
             pass
 
-        # 统一进行总线收发轮询
         try:
             for mot in arm._motor_map.values():
                 mot.request_feedback()
@@ -165,22 +151,26 @@ def make_gravity_compensation_controller(state: GravityCompensationState, comput
 
 def main() -> None:
     global _running
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--xml", type=Path, default=DEFAULT_XML)
     parser.add_argument("--cfg", type=Path, default=None)
     parser.add_argument("--gripper-cfg", type=Path, default=DEFAULT_GRIPPER_CFG)
     parser.add_argument("--rate", type=float, default=50.0)
-    parser.add_argument("--print-every", type=int, default=60)
     args = parser.parse_args()
 
+    # 加载模型
     model = mujoco.MjModel.from_xml_path(str(args.xml))
     data = mujoco.MjData(model)
     mapper = RealToSimMapper(model, DEFAULT_JOINT_NAMES)
 
-    gripper_act_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "gripper_actuator")
+    # 查找夹爪执行器
+    gripper_act_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "gripper")
     if gripper_act_id < 0:
-        gripper_act_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "gripper")
+        print("❌ 未找到夹爪执行器 'gripper'")
+        return
 
+    # 加载机器人控制类
     RobotArm = _load_robot_arm_class()
     load_gripper_cfg = _load_gripper_cfg_func()
     load_dynamics_model, compute_generalized_gravity = _load_gravity_functions()
@@ -190,21 +180,18 @@ def main() -> None:
     arm = RobotArm(cfg_path=str(args.cfg) if args.cfg is not None else None)
     state = GravityCompensationState(6)
 
-    # 存放夹爪电机实例
-    gripper_motor_obj = None
-
     print("\n" + "=" * 60)
-    print("  reBotArm Real2Sim: 7轴全物理拖拽示教 (大臂重力补偿 + 夹爪零力)")
+    print("  reBotArm Real2Sim: 7轴全物理拖拽示教")
     print("=" * 60)
+    print(f"[夹爪标定] 真机: [{GRIPPER_REAL_CLOSED_RAD:.1f}, {GRIPPER_REAL_OPEN_RAD:.1f}] rad")
+    print(f"[夹爪标定] 仿真: [{GRIPPER_SIM_CLOSED_METER:.3f}, {GRIPPER_SIM_OPEN_METER:.3f}] m")
 
     try:
         arm.connect()
         arm.enable()
         time.sleep(0.2)
 
-        # =================================================================== #
-        # 将夹爪注册到共享总线，并将其配置为 MIT 模式
-        # =================================================================== #
+        # 配置夹爪电机
         if "damiao" in arm._ctrl_map:
             shared_damiao_controller = arm._ctrl_map["damiao"]
             g_mot = shared_damiao_controller.add_damiao_motor(g_cfg.motor_id, g_cfg.feedback_id, g_cfg.model)
@@ -213,14 +200,12 @@ def main() -> None:
 
             try:
                 from motorbridge import Mode
-                # 🚨【核心修改】夹爪也配置为 MIT 模式，而不是 POS_VEL
                 g_mot.ensure_mode(Mode.MIT, 1000)
                 shared_damiao_controller.enable_all()
                 time.sleep(0.2)
-                print("✅ [真机 J7] 独立夹爪已切入 MIT 零力模式，现在可以用手掰动它了！")
+                print("✅ 夹爪已切入 MIT 零力模式")
             except Exception as e:
-                print(f"❌ [错误] 夹爪配置失败: {e}")
-        # =================================================================== #
+                print(f"❌ 夹爪配置失败: {e}")
 
         arm.mode_mit(kp=np.zeros(6), kd=KD_CONFIG[:6])
         arm.start_control_loop(make_gravity_compensation_controller(state, compute_generalized_gravity))
@@ -229,46 +214,53 @@ def main() -> None:
         period = 1.0 / args.rate
 
         with mujoco.viewer.launch_passive(model, data) as viewer:
-            print("\n👀 视窗已启动！现在你可以随意推拉大臂和夹爪，仿真会 1:1 完美同步！")
+            print("\n👀 视窗已启动！")
+            print("💡 可以随意拖拽机械臂和夹爪，仿真会实时同步")
+
             while _running and viewer.is_running():
                 t0 = time.perf_counter()
                 q_real_6d, tau_g, has_feedback = state.snapshot()
 
-                # 读取并映射夹爪真实物理角度
+                # 读取并映射夹爪真实角度
                 q_gripper_real = 0.0
-                sim_gripper_cmd = 0.0
-                if gripper_motor_obj is not None:
-                    # 获取电机的最新状态
+                if gripper_motor_obj is not None and gripper_act_id >= 0:
                     st = gripper_motor_obj.get_state()
                     if st is not None:
                         q_gripper_real = st.pos
 
-                        # 【线性映射】将真机的弧度(rad)等比例映射为仿真的位移(m)
-                        # 公式：(当前真机角度 / 真机最大开合角度) * 仿真最大位移
-                        ratio = abs(q_gripper_real) / GRIPPER_REAL_MAX_RAD
-                        sim_gripper_cmd = float(np.clip(ratio * GRIPPER_SIM_MAX_METER, 0.0, GRIPPER_SIM_MAX_METER))
+                        # 线性映射：真机角度 -> 仿真控制位置
+                        normalized = (q_gripper_real - GRIPPER_REAL_CLOSED_RAD) / (
+                                    GRIPPER_REAL_OPEN_RAD - GRIPPER_REAL_CLOSED_RAD)
+                        sim_gripper_cmd = GRIPPER_SIM_CLOSED_METER + normalized * (
+                                    GRIPPER_SIM_OPEN_METER - GRIPPER_SIM_CLOSED_METER)
 
-                        if gripper_act_id >= 0:
-                            data.ctrl[gripper_act_id] = sim_gripper_cmd
+                        # 确保在控制范围内
+                        sim_gripper_cmd = max(sim_gripper_cmd, 0.001)
+                        sim_gripper_cmd = min(sim_gripper_cmd, 0.05)
+
+                        # 设置控制信号
+                        data.ctrl[gripper_act_id] = sim_gripper_cmd
 
                 if has_feedback:
+                    # 应用机械臂位置
                     mapper.apply(data, q_real_6d)
-                    viewer.sync()
 
-                    if args.print_every > 0 and frame % args.print_every == 0:
-                        q_str = " ".join(f"{v:+.3f}" for v in q_real_6d)
-                        sys.stdout.write("\033[K")
-                        print(
-                            f"[{frame:06d}] 6D_Arm=[{q_str}] | J7_Real_Rad={q_gripper_real:+.3f} -> Sim_m={sim_gripper_cmd:.4f}",
-                            end="\r")
+                    # 推进仿真
+                    mujoco.mj_step(model, data)
+
+                    # 更新视图
+                    viewer.sync()
 
                 frame += 1
                 time.sleep(max(0, period - (time.perf_counter() - t0)))
 
     except KeyboardInterrupt:
         _running = False
+    except Exception as e:
+        print(f"\n❌ 程序异常: {e}")
+        _running = False
     finally:
-        print("\n\n[退出流程] 正在释放总线并关闭系统...")
+        print("\n\n[退出流程] 正在关闭系统...")
         try:
             arm.stop_control_loop()
             arm.disable()

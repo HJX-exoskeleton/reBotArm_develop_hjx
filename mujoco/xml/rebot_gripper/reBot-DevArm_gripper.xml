@@ -57,9 +57,9 @@
     <default class="rebot_joint_6">
       <joint damping="3"/>
     </default>
-    <default class="gripper">
-      <joint damping="0.5"/>
-    </default>
+<!--    <default class="gripper">-->
+<!--      <joint damping="0.5"/>-->
+<!--    </default>-->
 
     <default class="finger">
       <joint type="slide" armature="0.243" damping="40"/>
@@ -83,10 +83,10 @@
       -->
       <position ctrlrange="0.001 0.05" kp="2000" kv="124"/>
       <default class="left_finger">
-        <joint range="0 0.051" axis="0 -1 0" frictionloss="10"/>
+        <joint range="0 0.051" axis="0 -1 0" frictionloss="1"/>
       </default>
       <default class="right_finger">
-        <joint range="0 0.051" axis="0 1 0" frictionloss="10"/>
+        <joint range="0 0.051" axis="0 1 0" frictionloss="1"/>
       </default>
     </default>
 
