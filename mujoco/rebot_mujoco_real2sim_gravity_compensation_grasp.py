@@ -91,6 +91,7 @@ class RealToSimMapper:
         for i, act_id in enumerate(self.actuator_ids):
             if act_id is not None:
                 data.ctrl[act_id] = float(q_sim[i])
+        mujoco.mj_forward(self.model, data)
         return q_sim
 
 
@@ -157,6 +158,8 @@ def main() -> None:
     parser.add_argument("--cfg", type=Path, default=None)
     parser.add_argument("--gripper-cfg", type=Path, default=DEFAULT_GRIPPER_CFG)
     parser.add_argument("--rate", type=float, default=50.0)
+    parser.add_argument("--smooth", type=float, default=0.02, help="平滑因子 (0.0-1.0)，越小越平滑")
+    parser.add_argument("--max-speed", type=float, default=0.15, help="最大夹爪闭合速度(m/s)")
     args = parser.parse_args()
 
     # 加载模型
@@ -169,6 +172,10 @@ def main() -> None:
     if gripper_act_id < 0:
         print("❌ 未找到夹爪执行器 'gripper'")
         return
+
+    # 获取执行器控制范围
+    ctrlrange = model.actuator_ctrlrange[gripper_act_id]
+    print(f"✅ 找到夹爪执行器，控制范围: [{ctrlrange[0]:.4f}, {ctrlrange[1]:.4f}] m")
 
     # 加载机器人控制类
     RobotArm = _load_robot_arm_class()
@@ -185,6 +192,7 @@ def main() -> None:
     print("=" * 60)
     print(f"[夹爪标定] 真机: [{GRIPPER_REAL_CLOSED_RAD:.1f}, {GRIPPER_REAL_OPEN_RAD:.1f}] rad")
     print(f"[夹爪标定] 仿真: [{GRIPPER_SIM_CLOSED_METER:.3f}, {GRIPPER_SIM_OPEN_METER:.3f}] m")
+    print(f"[控制参数] 平滑因子: {args.smooth:.2f} | 最大速度: {args.max_speed:.2f} m/s")
 
     try:
         arm.connect()
@@ -212,34 +220,75 @@ def main() -> None:
 
         frame = 0
         period = 1.0 / args.rate
+        last_gripper_real_pos = 0.0
+        current_ctrl_value = 0.05  # 初始为张开状态
+        last_gripper_cmd = 0.05
+        smooth_factor = args.smooth
+        max_displacement_per_frame = args.max_speed * period  # 每帧最大位移
 
         with mujoco.viewer.launch_passive(model, data) as viewer:
             print("\n👀 视窗已启动！")
             print("💡 可以随意拖拽机械臂和夹爪，仿真会实时同步")
 
+            # 先设置一个初始控制值
+            data.ctrl[gripper_act_id] = current_ctrl_value
+            mujoco.mj_step(model, data)
+            viewer.sync()
+
             while _running and viewer.is_running():
                 t0 = time.perf_counter()
                 q_real_6d, tau_g, has_feedback = state.snapshot()
 
-                # 读取并映射夹爪真实角度
+                # 读取夹爪真实角度
                 q_gripper_real = 0.0
                 if gripper_motor_obj is not None and gripper_act_id >= 0:
                     st = gripper_motor_obj.get_state()
                     if st is not None:
                         q_gripper_real = st.pos
 
-                        # 线性映射：真机角度 -> 仿真控制位置
+                        # 线性映射：真机角度 -> 仿真目标控制位置
                         normalized = (q_gripper_real - GRIPPER_REAL_CLOSED_RAD) / (
                                     GRIPPER_REAL_OPEN_RAD - GRIPPER_REAL_CLOSED_RAD)
-                        sim_gripper_cmd = GRIPPER_SIM_CLOSED_METER + normalized * (
+                        target_ctrl_value = GRIPPER_SIM_CLOSED_METER + normalized * (
                                     GRIPPER_SIM_OPEN_METER - GRIPPER_SIM_CLOSED_METER)
 
-                        # 确保在控制范围内
-                        sim_gripper_cmd = max(sim_gripper_cmd, 0.001)
-                        sim_gripper_cmd = min(sim_gripper_cmd, 0.05)
+                        # 确保在XML控制范围内
+                        target_ctrl_value = max(target_ctrl_value, 0.001)
+                        target_ctrl_value = min(target_ctrl_value, 0.05)
+
+                        # 计算真机夹爪速度
+                        gripper_real_velocity = (q_gripper_real - last_gripper_real_pos) / period
+                        last_gripper_real_pos = q_gripper_real
+
+                        # 【关键】平滑过渡到目标值
+                        # 方法1：线性插值平滑
+                        diff = target_ctrl_value - current_ctrl_value
+
+                        # 限制最大位移
+                        if abs(diff) > max_displacement_per_frame:
+                            if diff > 0:
+                                current_ctrl_value += max_displacement_per_frame
+                            else:
+                                current_ctrl_value -= max_displacement_per_frame
+                        else:
+                            # 使用平滑因子
+                            current_ctrl_value = current_ctrl_value * (
+                                        1 - smooth_factor) + target_ctrl_value * smooth_factor
+
+                        # 确保最终值在控制范围内
+                        current_ctrl_value = max(current_ctrl_value, 0.001)
+                        current_ctrl_value = min(current_ctrl_value, 0.05)
 
                         # 设置控制信号
-                        data.ctrl[gripper_act_id] = sim_gripper_cmd
+                        data.ctrl[gripper_act_id] = current_ctrl_value
+
+                        # 显示状态
+                        if frame % 100 == 0:  # 每2秒显示一次
+                            gripper_percent = normalized * 100
+                            velocity_ms = (current_ctrl_value - last_gripper_cmd) / period
+                            print(
+                                f"[{frame:06d}] 夹爪:{gripper_percent:5.1f}% | 目标:{target_ctrl_value:.4f}m | 实际:{current_ctrl_value:.4f}m | 速度:{velocity_ms:.2f}m/s")
+                            last_gripper_cmd = current_ctrl_value
 
                 if has_feedback:
                     # 应用机械臂位置
