@@ -36,7 +36,7 @@ VISUAL_DIST_CLOSED = 30.0  # 手指闭合时的像素距离
 VISUAL_DIST_OPEN = 180.0  # 手指完全张开时的像素距离
 
 # B. 真机夹爪控制范围 (弧度 Rad)
-GRIPPER_REAL_CLOSED_RAD = 0.0  # 真机闭合
+GRIPPER_REAL_CLOSED_RAD = 0.45  # 真机闭合  0.0
 GRIPPER_REAL_OPEN_RAD = -5.8  # 真机张开
 
 # C. MIT 模式位置控制参数 (PD 控制)
