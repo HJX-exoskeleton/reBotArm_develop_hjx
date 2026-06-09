@@ -41,8 +41,8 @@ GRIPPER_REAL_OPEN_RAD = -5.8  # 真机张开
 
 # C. MIT 模式位置控制参数 (PD 控制)
 # 注意：Kp 和 Kd 决定了夹爪跟随手势的“硬度”和“力量”。
-GRIPPER_KP = 10.0
-GRIPPER_KD = 1.0
+GRIPPER_KP = 4.0
+GRIPPER_KD = 0.5
 GRIPPER_TAU_FF = 0.0
 
 # D. 动作平滑系数 (0.0 到 1.0)
