@@ -59,7 +59,7 @@ python servo_arm_teleoperation_real.py
 python servo_arm_teleoperation_real2sim.py
 
 舵机遥操作rebot的数据采集：
-python servo_arm_teleoperation_record.py --xml /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/master_slave_control/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml --port /dev/ttyUSB0 --baudrate 115200 --rate 50 --read-rate 60 --calibrate-current-as-master --task_name rebot_test --save_dir ./data --episode_len 500 --episode_idx 0
+python record_real_episodes.py --xml /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/master_slave_control/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml --port /dev/ttyUSB0 --baudrate 115200 --rate 50 --read-rate 60 --calibrate-current-as-master --task_name rebot_test --save_dir ./data --episode_len 500 --episode_idx 0
 
 舵机遥操作rebot的数据重播：
 # python replay_real_episodes.py --dataset ./data/rebot_test/episode_0.hdf5
