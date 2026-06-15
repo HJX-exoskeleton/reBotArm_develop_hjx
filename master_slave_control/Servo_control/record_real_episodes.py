@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-舵机主手 -> 达妙真机机械臂 + 达妙真机夹爪 遥操作程序 (带 ALOHA 规范多相机数据采集占位)
+舵机主手 -> 达妙真机机械臂 + 达妙真机夹爪 遥操作程序 (集成多线程真实RGB流)
 
 控制链路：
     ID1~ID6 ST/SMS_STS 舵机主手 -> q_sim(rad) -> 达妙真机 6 轴 q_real(rad) -> SafetyGuard -> pos_vel
@@ -10,7 +10,7 @@
 数据采集特性：
     1. 按下【Enter】键触发录制，支持 --time 或 --episode_len。
     2. 自动保存为标准 ALOHA 规范 HDF5 (time, qpos, qvel, action, images/*)。
-    3. 预留多相机图像占位符，默认生成 480x640x3 尺寸的空图像流，方便后续无缝接入硬件。
+    3. 后台多线程读取 MJPG 视频流并实时转换为 RGB，彻底解耦，绝不阻塞 50Hz 控制主循环。
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import threading
 import time
 from pathlib import Path
 
+import cv2  # 🌟 新增：OpenCV 用于读取真实相机
 import h5py
 from tqdm import tqdm
 
@@ -43,7 +44,7 @@ recorded_qpos = []
 recorded_qvel = []
 recorded_action = []
 
-# 🌟 新增：相机图像流缓存字典
+# 相机图像流缓存字典
 recorded_images = {}
 
 _config = {
@@ -53,8 +54,8 @@ _config = {
     "dt": 0.02,
     "rate": 50,
     "episode_idx": None,
-    # 🌟 新增：预留相机名称列表（标准 ALOHA 通常包含高空全局、腕部等）
-    "camera_names": ["cam_high", "cam_wrist"]
+    # 🌟 修改：目前先挂载全局高空相机 cam_high
+    "camera_names": ["cam_high"]
 }
 
 
@@ -66,6 +67,58 @@ def _sigint_handler(signum, frame) -> None:
 
 signal.signal(signal.SIGINT, _sigint_handler)
 signal.signal(signal.SIGTERM, _sigint_handler)
+
+
+# =============================================================================
+# 0.5 🌟 新增：独立的多线程相机读取类
+# =============================================================================
+class ThreadedCamera:
+    """独立的后台相机读取线程，避免 OpenCV I/O 阻塞 50Hz 的遥操作主循环"""
+
+    def __init__(self, src=2, width=640, height=480, name="camera"):
+        self.name = name
+        self.capture = cv2.VideoCapture(src)
+
+        # 强制使用 MJPG 编码压缩 USB 带宽
+        self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+        self.ret, self.frame = self.capture.read()
+        self.valid = self.ret
+
+        if not self.valid:
+            print(f"⚠️ [警告] 相机 {self.name} (src={src}) 初始化失败，将输出全黑图像以维持时序对齐。")
+            self.frame = np.zeros((height, width, 3), dtype=np.uint8)
+        else:
+            print(f"📷 [成功] 相机 {self.name} (src={src}) 后台读取线程已启动。")
+
+        self.running = True
+        self.lock = threading.Lock()
+
+        if self.valid:
+            self.thread = threading.Thread(target=self._update, daemon=True)
+            self.thread.start()
+
+    def _update(self):
+        while self.running:
+            ret, frame = self.capture.read()
+            if ret:
+                with self.lock:
+                    self.frame = frame
+
+    def read_rgb(self):
+        """主线程调用的极速读取接口，直接返回内存最新帧的 RGB 格式"""
+        with self.lock:
+            current_frame = self.frame.copy()
+        if self.valid:
+            return cv2.cvtColor(current_frame, cv2.COLOR_BGR2RGB)
+        return current_frame
+
+    def release(self):
+        self.running = False
+        if self.capture.isOpened():
+            self.capture.release()
 
 
 # =============================================================================
@@ -84,7 +137,6 @@ def save_to_hdf5():
     task_sub_dir = _config["base_save_dir"] / task_name
     task_sub_dir.mkdir(parents=True, exist_ok=True)
 
-    # 自动探测自增或显式指定 idx
     if _config["episode_idx"] is not None:
         final_episode_idx = _config["episode_idx"]
     else:
@@ -104,13 +156,11 @@ def save_to_hdf5():
     print(f"\n\n[💾 存储线程] 正在向硬盘写入 {file_name} ({total_frames} 帧 ALOHA 规范数据)...")
     t0 = time.time()
 
-    # 动态计算总的数据集写入步数（4个基础状态 + N个相机）
     num_datasets = 4 + len(_config["camera_names"])
 
     try:
         with h5py.File(file_path, 'w') as f:
             with tqdm(total=num_datasets, desc="📝 HDF5数据集落盘", bar_format="{l_bar}{bar:30}{r_bar}") as pbar:
-                # 1. 基础状态数据写入 (float32)
                 f.create_dataset('/time', data=np.array(recorded_timestamps, dtype=np.float32), compression="gzip")
                 pbar.update(1)
 
@@ -126,17 +176,14 @@ def save_to_hdf5():
                                  compression="gzip")
                 pbar.update(1)
 
-                # 2. 🌟 新增：多相机图像数据写入 (uint8)
                 for cam_name in _config["camera_names"]:
                     img_array = np.array(recorded_images[cam_name], dtype=np.uint8)
-                    # 具身智能大数据量推荐开启 chunks 优化，加快模型 DataLoader 读取速度
                     f.create_dataset(f'/observations/images/{cam_name}',
                                      data=img_array,
                                      compression="gzip",
                                      chunks=(1, img_array.shape[1], img_array.shape[2], img_array.shape[3]))
                     pbar.update(1)
 
-            # 元数据标签
             f.attrs['task_name'] = task_name
             f.attrs['episode_idx'] = final_episode_idx
             f.attrs['episode_len'] = _config["episode_len"]
@@ -151,7 +198,6 @@ def save_to_hdf5():
     except Exception as e:
         print(f"❌ [💾 导出异常] 写入 HDF5 失败: {e}\n")
 
-    # 彻底释放内存缓存
     recorded_timestamps.clear()
     recorded_qpos.clear()
     recorded_qvel.clear()
@@ -161,7 +207,6 @@ def save_to_hdf5():
 
 
 def terminal_keyboard_listener():
-    """终端下的回车事件监听器，用于触发录制"""
     global _is_recording, _running
     while _running:
         try:
@@ -169,8 +214,7 @@ def terminal_keyboard_listener():
         except (KeyboardInterrupt, EOFError):
             break
 
-        if not _running:
-            break
+        if not _running: break
 
         if not _is_recording:
             total_seconds = _config["episode_len"] * _config["dt"]
@@ -202,7 +246,7 @@ def terminal_keyboard_listener():
 
 
 # =============================================================================
-# 1.5 路径发现与动态导入 (保持原样)
+# 1.5 ~ 8. 路径导入、工具函数、命令行参数 (与原版保持一致)
 # =============================================================================
 CURRENT_DIR = Path(__file__).resolve().parent
 
@@ -297,9 +341,6 @@ def _load_gripper_cfg_func():
     raise ImportError("无法加载 gripper.py 中的 load_cfg。")
 
 
-# =============================================================================
-# 2. 默认路径与参数 (保持原样)
-# =============================================================================
 def _default_xml_path() -> Path:
     candidates = ["mujoco/xml/rebot_gripper/sim_reBot_grasp.xml",
                   "Python/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml"]
@@ -317,9 +358,6 @@ DEFAULT_XML = _default_xml_path()
 DEFAULT_GRIPPER_CFG = _default_gripper_cfg_path()
 DEFAULT_SERVO_PORT = "COM6" if os.name == "nt" else "/dev/ttyUSB0"
 
-# =============================================================================
-# 3. 舵机主手与夹爪参数 (保持原样)
-# =============================================================================
 ARM_SERVO_IDS = [1, 2, 3, 4, 5, 6]
 GRIPPER_SERVO_ID = 7
 ARM_DOF = len(ARM_SERVO_IDS)
@@ -344,9 +382,6 @@ DEFAULT_GRIPPER_REAL_CLOSED_RAD = 0.2
 DEFAULT_GRIPPER_REAL_OPEN_RAD = -5.8
 
 
-# =============================================================================
-# 4. 基础工具函数 (保持原样)
-# =============================================================================
 def clamp(val: float, min_val: float, max_val: float) -> float: return max(float(min_val),
                                                                            min(float(val), float(max_val)))
 
@@ -399,8 +434,7 @@ def smooth_update_scalar(prev: float, target: float, alpha: float) -> float:
 def read_servo_angle(scs, servo_id: int, last_angle: float) -> tuple[float, bool]:
     try:
         pos, speed, result, error = scs.ReadPosSpeed(servo_id)
-        if result == COMM_SUCCESS:
-            return float(limit_servo_deg(servo_id, servo_pos_to_deg(pos))), True
+        if result == COMM_SUCCESS: return float(limit_servo_deg(servo_id, servo_pos_to_deg(pos))), True
         return float(last_angle), False
     except:
         return float(last_angle), False
@@ -416,9 +450,6 @@ def release_servo_torque(scs, servo_ids: list[int]) -> None:
         time.sleep(0.02)
 
 
-# =============================================================================
-# 5. MuJoCo 标准空间 -> 达妙真机空间 (保持原样)
-# =============================================================================
 DEFAULT_CMD_VLIM = np.array([0.8, 0.8, 0.8, 1.2, 1.2, 1.2], dtype=np.float64)
 DEFAULT_MAX_STEP = np.array([0.015, 0.015, 0.015, 0.020, 0.020, 0.020], dtype=np.float64)
 DEFAULT_SOFT_MARGIN = 0.0
@@ -498,16 +529,16 @@ class SimToRealMapper:
 
 class SafetyGuard:
     def __init__(self, mapper, max_step, max_start_error, max_tracking_error, tracking_breach_samples):
-        self.mapper = mapper
+        self.mapper = mapper;
         self.max_step = np.asarray(max_step, dtype=np.float64)
-        self.max_start_error = float(max_start_error)
+        self.max_start_error = float(max_start_error);
         self.max_tracking_error = float(max_tracking_error)
         self.tracking_breach_samples = max(int(tracking_breach_samples), 1)
-        self.command: np.ndarray | None = None
+        self.command: np.ndarray | None = None;
         self._tracking_breach_count = 0
 
     def initialize(self, q_real_now, q_target, allow_large_start) -> np.ndarray:
-        self.command = np.asarray(q_real_now, dtype=np.float64)[:6].copy()
+        self.command = np.asarray(q_real_now, dtype=np.float64)[:6].copy();
         return self.command.copy()
 
     def next_command(self, q_target, q_feedback) -> np.ndarray:
@@ -523,9 +554,6 @@ class SafetyGuard:
         return self.command.copy()
 
 
-# =============================================================================
-# 6. 达妙夹爪使能与 MIT 控制 (保持原样)
-# =============================================================================
 def setup_damiao_gripper(arm, gripper_cfg_path, gripper_name_fallback="gripper"):
     if arm is None: return None, None, None
     load_gripper_cfg = _load_gripper_cfg_func()
@@ -579,9 +607,6 @@ def get_gripper_feedback_vel(g_mot) -> float | None:
         return 0.0
 
 
-# =============================================================================
-# 7. 舵机读取线程 (保持原样)
-# =============================================================================
 def servo_reader_worker(scs, state_lock, shared_state, read_rate, servo_to_sim_sign, sim_home_rad, enable_gripper,
                         invert_gripper, closed_rad, open_rad):
     global _running
@@ -636,18 +661,13 @@ def wait_for_servo_ready(state_lock, shared_state, min_success_count, timeout=5.
     return False
 
 
-# =============================================================================
-# 8. 命令行参数
-# =============================================================================
 def build_argparser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="舵机主手 -> 达妙真机遥操作 (带多相机数据采集占位)")
-
+    parser = argparse.ArgumentParser(description="舵机主手 -> 达妙真机遥操作 (带多相机真实数据采集)")
     parser.add_argument("--task_name", "-t", type=str, default="teleop_task", help="采集任务名称")
     parser.add_argument("--save_dir", "-d", type=str, default="./data", help="数据保存根目录")
     parser.add_argument("--episode_len", "-l", type=int, default=500, help="设定单次录制的时间步数")
     parser.add_argument("--time", "-sec", type=float, default=None, help="以秒为单位设定录制时长")
     parser.add_argument("--episode_idx", "-idx", type=int, default=None, help="显式指定录制索引号")
-
     parser.add_argument("--xml", type=Path, default=DEFAULT_XML)
     parser.add_argument("--joint-names", type=str, default="joint1,joint2,joint3,joint4,joint5,joint6")
     parser.add_argument("--port", type=str, default=DEFAULT_SERVO_PORT)
@@ -684,7 +704,6 @@ def build_argparser() -> argparse.ArgumentParser:
     parser.add_argument("--settle-interval", type=float, default=DEFAULT_SETTLE_INTERVAL)
     parser.add_argument("--max-servo-age", type=float, default=0.5)
     parser.add_argument("--print-every", type=int, default=50)
-
     return parser
 
 
@@ -696,7 +715,6 @@ def main() -> None:
 
     args = build_argparser().parse_args()
 
-    # 参数联动解析
     dt_actual = 1.0 / args.rate
     if args.time is not None:
         final_episode_len = int(args.time * args.rate)
@@ -710,9 +728,18 @@ def main() -> None:
     _config["rate"] = args.rate
     _config["episode_idx"] = args.episode_idx
 
-    # 🌟 初始化相机流的全局缓存内存槽
+    # 🌟 1. 初始化相机流全局缓存槽
     for cam_name in _config["camera_names"]:
         recorded_images[cam_name] = []
+
+    # 🌟 2. 构建真实的相机读取对象字典（未来扩展无缝对接）
+    # 如果相机打不开或不存在，字典里依然会有对象，但它的 read_rgb 会返回安全的黑屏图
+    cameras = {}
+    if "cam_high" in _config["camera_names"]:
+        cameras["cam_high"] = ThreadedCamera(src=2, name="cam_high")
+    if "cam_wrist" in _config["camera_names"]:
+        # 预留了你以后的相机接口，指定不同 src 即可
+        cameras["cam_wrist"] = ThreadedCamera(src=4, name="cam_wrist")
 
     enable_gripper = not args.no_gripper
     servo_to_sim_sign = _parse_vector(args.servo_to_sim_signs, DEFAULT_SERVO_TO_SIM_SIGN, "signs")
@@ -728,7 +755,7 @@ def main() -> None:
     print(f"  📝 目标任务名称: {args.task_name}")
     print(f"  ⚡ 控制与录制频率: {args.rate} Hz")
     print(f"  ⏱️ 单次录制规模: {final_episode_len} 步 ({final_episode_len * dt_actual:.2f} 秒)")
-    print(f"  📷 已挂载占位相机: {_config['camera_names']}")
+    print(f"  📷 已挂载真实相机: {_config['camera_names']}")
     print("=" * 60)
 
     model = mujoco.MjModel.from_xml_path(str(args.xml))
@@ -758,8 +785,9 @@ def main() -> None:
     }
 
     reader_thread = threading.Thread(target=servo_reader_worker, args=(
-    scs, state_lock, shared_state, args.read_rate, servo_to_sim_sign, sim_home_rad, enable_gripper, args.invert_gripper,
-    args.gripper_real_closed_rad, args.gripper_real_open_rad), daemon=True)
+        scs, state_lock, shared_state, args.read_rate, servo_to_sim_sign, sim_home_rad, enable_gripper,
+        args.invert_gripper,
+        args.gripper_real_closed_rad, args.gripper_real_open_rad), daemon=True)
     reader_thread.start()
 
     if not wait_for_servo_ready(state_lock, shared_state, ARM_DOF + (1 if enable_gripper else 0)): return
@@ -791,7 +819,6 @@ def main() -> None:
     if enable_gripper: send_damiao_gripper_mit(gripper_motor, gripper_controller, filtered_gripper_target_rad,
                                                args.gripper_kp, args.gripper_kd, args.gripper_tau)
 
-    # 启动键盘录制监听线程
     listener_thread = threading.Thread(target=terminal_keyboard_listener, daemon=True)
     listener_thread.start()
     print("\n📌 [录制就绪] 控制台按下【回车键】开始采集当前 Episode 数据...")
@@ -837,24 +864,24 @@ def main() -> None:
                 g_vel = get_gripper_feedback_vel(gripper_motor)
                 if g_vel is not None: gripper_fb_vel = g_vel
 
-            # 🌟 3. 截断式全状态采集层（包含视觉流占位）
+            # 🌟 3. 核心截断式采集层（读取真实的 RGB 相机流）
             if _is_recording:
                 current_frame_count = len(recorded_timestamps)
                 if current_frame_count < _config["episode_len"]:
                     rec_time = current_frame_count * _config["dt"]
                     recorded_timestamps.append(rec_time)
 
-                    # 组装 7-DoF 机械臂+夹爪状态
                     recorded_qpos.append(np.concatenate([q_feedback, [gripper_fb_pos]]))
                     recorded_qvel.append(np.concatenate([v_feedback, [gripper_fb_vel]]))
                     recorded_action.append(np.concatenate([q_cmd, [filtered_gripper_target_rad]]))
 
-                    # 🌟 核心占位：为每个挂载的相机存入一张 480x640x3 的 uint8 零矩阵图片
-                    # 提示：未来接入相机时，直接在此处将 dummy_frame 替换为类似：
-                    # cap_high.read() 获取到的包含图像像素的 numpy array 即可。
+                    # 🌟 动态匹配已挂载的真实相机并获取 RGB 数据
                     for cam_name in _config["camera_names"]:
-                        dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                        recorded_images[cam_name].append(dummy_frame)
+                        if cam_name in cameras:
+                            recorded_images[cam_name].append(cameras[cam_name].read_rgb())
+                        else:
+                            # 降级容错机制：防止写错配置导致程序中断
+                            recorded_images[cam_name].append(np.zeros((480, 640, 3), dtype=np.uint8))
                 else:
                     _is_recording = False
 
@@ -876,8 +903,15 @@ def main() -> None:
         close_arm_fast(arm)
         portHandler.closePort()
 
+        # 🌟 4. 安全退出：释放所有硬件相机占用
+        for cam in cameras.values():
+            cam.release()
+        print("\n🧹 所有硬件资源已安全释放。")
+
 
 if __name__ == "__main__":
     main()
 
 # python record_real_episodes.py --xml /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/master_slave_control/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml --port /dev/ttyUSB0 --baudrate 115200 --rate 50 --read-rate 60 --calibrate-current-as-master --task_name rebot_test --save_dir ./data --episode_len 1000 --episode_idx 0
+
+
