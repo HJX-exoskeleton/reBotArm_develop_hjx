@@ -42,4 +42,21 @@ uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --sim-only
 uv run python mujoco/rebot_mujoco_sim2real_control_dance.py --start-from-keyframe --calibrate-current-as-keyframe
 ===================================================================================
 
+～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
+# master_slave_control
+cd reBotArm_develop_hjx/master_slave_control
 
+舵机回零点：
+python  servo_sleep.py
+
+舵机遥操作仿真rebot：
+python servo_arm_teleoperation_sim.py
+
+舵机遥操作真机rebot：
+python servo_arm_teleoperation_real.py
+
+舵机遥操作rebot的real2sim：
+python servo_arm_teleoperation_real2sim.py
+
+
+～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～～
