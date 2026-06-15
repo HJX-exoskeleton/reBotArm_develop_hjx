@@ -880,4 +880,4 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
-# python record_real_episodes.py --xml /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/master_slave_control/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml --port /dev/ttyUSB0 --baudrate 115200 --rate 50 --read-rate 60 --calibrate-current-as-master --task_name rebot_test --save_dir ./data --episode_len 500 --episode_idx 0
+# python record_real_episodes.py --xml /home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/master_slave_control/Servo_control/xml/rebot_gripper/sim_reBot_grasp.xml --port /dev/ttyUSB0 --baudrate 115200 --rate 50 --read-rate 60 --calibrate-current-as-master --task_name rebot_test --save_dir ./data --episode_len 1000 --episode_idx 0
