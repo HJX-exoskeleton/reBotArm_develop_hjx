@@ -32,8 +32,8 @@ _running = True
 TORQUE_LIMITS = np.array([10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
 
 # 各轴特异化阻尼系数 (Kd)  # 各轴重力前馈缩放系数
-KD_CONFIG = np.array([1.0, 2.0, 1.5, 1.0, 0.8, 0.6])
-GRAVITY_SCALES = np.array([1.50, 0.75, 0.75, 0.75, 1.0, 1.0])
+KD_CONFIG = np.array([1.0, 1.5, 1.5, 1.5, 0.8, 0.6])
+GRAVITY_SCALES = np.array([1.50, 1.0, 0.85, 0.85, 1.0, 1.0])
 
 # 各轴特异化阻尼系数 (Kd)  # 各轴重力前馈缩放系数
 # KD_CONFIG = np.array([1.0, 1.0, 1.0, 1.0, 0.8, 0.8])
