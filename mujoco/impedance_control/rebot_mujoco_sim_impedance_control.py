@@ -73,7 +73,7 @@ DX_BASE = np.array([18.0, 18.0, 16.0])
 KQ_DAMP_BASE = np.array([0.25, 0.35, 0.35, 0.20, 0.10, 0.08])
 
 # 每个关节最大输出力矩，单位 N·m
-TORQUE_LIMITS = np.array([15.0, 15.0, 12.0, 7.0, 5.0, 5.0])
+TORQUE_LIMITS = np.array([12.0, 12.0, 12.0, 6.0, 6.0, 6.0])
 
 # 力矩变化率限制，单位 N·m/s
 TAU_RATE_LIMITS = np.array([50.0, 50.0, 40.0, 25.0, 18.0, 18.0])

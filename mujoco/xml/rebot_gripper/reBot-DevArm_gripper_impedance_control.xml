@@ -39,22 +39,22 @@
 
   <default>
     <default class="rebot_joint_1">
-      <joint damping="1"/>
+      <joint damping="6"/>
     </default>
     <default class="rebot_joint_2">
-      <joint damping="1"/>
+      <joint damping="6"/>
     </default>
     <default class="rebot_joint_3">
-      <joint damping="1"/>
+      <joint damping="6"/>
     </default>
     <default class="rebot_joint_4">
-      <joint damping="0.5"/>
+      <joint damping="2"/>
     </default>
     <default class="rebot_joint_5">
-      <joint damping="0.5"/>
+      <joint damping="2"/>
     </default>
     <default class="rebot_joint_6">
-      <joint damping="0.5"/>
+      <joint damping="2"/>
     </default>
 
     <default class="finger">
