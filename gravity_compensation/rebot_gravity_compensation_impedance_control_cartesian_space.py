@@ -62,8 +62,10 @@ GRAVITY_SCALES = np.array([1.50, 1.0, 0.95, 0.85, 1.0, 1.0])
 # D_ROT:   N*m / (rad/s)
 #
 # 首次真机建议只启用位置阻抗，姿态保持默认关闭。
-K_TRANS_BASE = np.array([35.0, 35.0, 30.0])
-D_TRANS_BASE = np.array([8.0, 8.0, 7.0])
+# K_TRANS_BASE = np.array([35.0, 35.0, 30.0])
+# D_TRANS_BASE = np.array([8.0, 8.0, 7.0])
+K_TRANS_BASE = np.array([150.0, 150.0, 120.0])
+D_TRANS_BASE = np.array([0.5, 0.5, 0.5])
 
 K_ROT_BASE = np.array([0.6, 0.6, 0.4])
 D_ROT_BASE = np.array([0.08, 0.08, 0.06])
@@ -75,7 +77,8 @@ CARTESIAN_STIFFNESS_SCALE = 1.0
 # 笛卡尔力/力矩与叠加后关节力矩限幅。
 MAX_CART_FORCE_N = 12.0
 MAX_CART_TORQUE_NM = 1.2
-TASK_TORQUE_LIMITS = np.array([4.0, 4.0, 4.0, 2.0, 2.0, 2.0])
+# TASK_TORQUE_LIMITS = np.array([4.0, 4.0, 4.0, 2.0, 2.0, 2.0])
+TASK_TORQUE_LIMITS = np.array([10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
 
 # 速度估计滤波，用于末端阻尼与打印。
 QD_FILTER_ALPHA = 0.25
