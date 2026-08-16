@@ -1,0 +1,36 @@
+<mujoco model="reBot-DevArm_AeroHand_Right">
+  <!-- Component definitions are merged by MuJoCo at load time. -->
+  <include file="rebor_arm_6dof.xml"/>
+  <include file="aerohand_right.xml"/>
+
+  <worldbody>
+    <light name="spotlight" mode="targetbodycom" target="palm" pos="3 0 4"/>
+  </worldbody>
+
+  <keyframe>
+    <!-- Key 0: closed grasp pose; controls keep the tendon actuators pulling closed. -->
+    <key name="closed"
+         qpos="0 0 0 0 0 0
+               1.5 1.5 1.5
+               1.5 1.5 1.5
+               1.5 1.5 1.5
+               1.5 1.5 1.5
+               1.5 0.85 1.4 1.4"
+         ctrl="0 0 0 0 0 0
+               0.058520 0.058520 0.058520 0.058520
+               1.5 0.026152 0.081568"/>
+
+    <!-- Key 1: fully open hand with zero finger-closing control. -->
+    <key name="open"
+         qpos="0 0 0 0 0 0
+               0 0 0
+               0 0 0
+               0 0 0
+               0 0 0
+               0 0 0 0"
+         ctrl="0 0 0 0 0 0
+               0.110387 0.110387 0.110387 0.110387
+               0 0.038389 0.112138"/>
+  </keyframe>
+
+</mujoco>
