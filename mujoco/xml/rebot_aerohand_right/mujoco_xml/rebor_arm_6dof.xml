@@ -65,7 +65,7 @@
   <worldbody>
 
     <!-- rebot -->
-    <body name="base_link" pos="0 0 0">
+    <body name="base_link" pos="-0.1 0 0">
       <geom type="mesh" rgba="0.62745 0.62745 0.62745 1" mesh="rebot_base_link" material="metal"/>
 
       <body name="link1" pos="-8.416e-05 0 0.08465">

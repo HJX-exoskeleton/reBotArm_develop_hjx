@@ -1,0 +1,51 @@
+<mujoco model="reBot-AeroHand-transfer-cube">
+  <!--
+    Include the same two components used by rebot_arm_right_hand.xml directly.
+    Its 22-qpos keyframes cannot be included in this 29-qpos model after the
+    free cube is added, so task-complete keyframes are defined below instead.
+  -->
+  <include file="rebotarm_aerohand_scene.xml"/>
+  <include file="rebor_arm_6dof.xml"/>
+  <include file="aerohand_right.xml"/>
+
+  <worldbody>
+    <!-- 50 mm diameter, 70 mm tall cylinder resting on the tabletop. -->
+    <body name="box" pos="0.30 -0.1 0.07">
+      <joint name="red_box_joint" type="free" damping="0.1" frictionloss="0.02"/>
+      <inertial pos="0 0 0" mass="0.075"
+                diaginertia="0.000042344 0.000042344 0.000023438"/>
+      <geom name="red_box" type="cylinder" size="0.02 0.07"
+            rgba="0.9 0.08 0.06 1"
+            condim="4" friction="1.1 0.02 0.001"
+            solref="0.008 1" solimp="0.95 0.99 0.001" priority="1"/>
+    </body>
+
+    <!-- Fixed, non-colliding circular goal region on the opposite side. -->
+    <body name="target_box" pos="0.30 0.20 0.003">
+      <geom name="target_box" type="cylinder" size="0.10 0.003"
+            contype="0" conaffinity="0" group="0"
+            rgba="0.58 0.58 0.58 0.8"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Bent arm, open hand, and cube at its initial tabletop pose. -->
+    <key name="task_ready"
+         qpos="0 -1 -1 0 0 0
+               0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+               0.40 -0.18 0.035 1 0 0 0"
+         ctrl="0 -1 -1 0 0 0
+               0.110387 0.110387 0.110387 0.110387
+               0 0.038389 0.112138"/>
+
+    <key name="task_closed"
+         qpos="0 -1 -1 0 0 0
+               1.5 1.5 1.5  1.5 1.5 1.5
+               1.5 1.5 1.5  1.5 1.5 1.5
+               1.5 0.85 1.4 1.4
+               0.40 -0.18 0.035 1 0 0 0"
+         ctrl="0 -1 -1 0 0 0
+               0.058520 0.058520 0.058520 0.058520
+               1.5 0.026152 0.081568"/>
+  </keyframe>
+</mujoco>

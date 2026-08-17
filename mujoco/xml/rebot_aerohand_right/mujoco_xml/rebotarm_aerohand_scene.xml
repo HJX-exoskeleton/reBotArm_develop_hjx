@@ -1,0 +1,69 @@
+<mujocoinclude>
+  <!--
+    Task scene for the reBot + right AeroHand transfer-cube environment.
+
+    The robot model fixes base_link at world z=0, so the tabletop upper surface
+    is also z=0. This puts the complete base footprint directly on the desk.
+    Materials MatPlane and wood are supplied by rebor_arm_6dof.xml; reusing them
+    avoids duplicate asset names when this scene and the robot are included.
+  -->
+
+  <statistic center="0.22 0 0.22" extent="0.85" meansize="0.04"/>
+
+  <visual>
+    <global azimuth="135" elevation="-25"/>
+    <map fogstart="1.5" fogend="5" force="0.1" znear="0.01"/>
+    <quality shadowsize="4096" offsamples="4"/>
+    <headlight diffuse="0.65 0.65 0.65" ambient="0.35 0.35 0.35"
+               specular="0.25 0.25 0.25"/>
+  </visual>
+
+  <worldbody>
+    <light name="task_key_light" directional="true" castshadow="true"
+           pos="-0.5 -0.4 1.4" dir="0.35 0.25 -1"
+           diffuse="0.65 0.65 0.65" specular="0.25 0.25 0.25"/>
+    <light name="task_fill_light" directional="true" castshadow="false"
+           pos="0.8 0.5 1.0" dir="-0.4 -0.2 -1"
+           diffuse="0.35 0.35 0.35" specular="0.1 0.1 0.1"/>
+
+    <!-- Large checker-grid floor, 0.72 m below the tabletop. -->
+    <geom name="task_floor" type="plane" pos="0 0 -0.72" size="10 10 0.1"
+          material="MatPlane" friction="1 0.01 0.001" condim="3"/>
+
+    <!--
+      1.20 x 0.90 m desk. The top geom is centered at z=-0.02 with half-height
+      0.02, therefore its upper contact surface is exactly world z=0.
+    -->
+    <body name="table" pos="0.20 0 0">
+      <geom name="tabletop" type="box" pos="0 0 -0.02"
+            size="0.60 0.45 0.02" material="wood"
+            friction="1.0 0.02 0.001" condim="4"/>
+
+      <geom name="table_leg_front_left" type="box" pos="-0.50 -0.35 -0.37"
+            size="0.035 0.035 0.35" material="wood"/>
+      <geom name="table_leg_front_right" type="box" pos="-0.50 0.35 -0.37"
+            size="0.035 0.035 0.35" material="wood"/>
+      <geom name="table_leg_back_left" type="box" pos="0.50 -0.35 -0.37"
+            size="0.035 0.035 0.35" material="wood"/>
+      <geom name="table_leg_back_right" type="box" pos="0.50 0.35 -0.37"
+            size="0.035 0.035 0.35" material="wood"/>
+    </body>
+
+    <!-- Camera target placed between the initial cube and goal region. -->
+    <body name="task_camera_focus" pos="0.40 0.01 0.09"/>
+    <site name="workspace_center" pos="0.40 0.01 0.001" type="sphere"
+          size="0.006" rgba="1 0 0 0"/>
+
+    <camera name="left_pillar" pos="-0.65 -0.65 0.62" fovy="55"
+            mode="targetbody" target="task_camera_focus"/>
+    <camera name="right_pillar" pos="-0.65 0.65 0.62" fovy="55"
+            mode="targetbody" target="task_camera_focus"/>
+    <camera name="front" pos="0.95 0 0.50" fovy="55"
+            mode="targetbody" target="task_camera_focus"/>
+    <camera name="top" pos="0.32 0 1.10" fovy="52"
+            mode="targetbody" target="task_camera_focus"/>
+    <camera name="angle" pos="0.72 -0.58 0.62" fovy="58"
+            mode="targetbody" target="task_camera_focus"/>
+  </worldbody>
+
+</mujocoinclude>
