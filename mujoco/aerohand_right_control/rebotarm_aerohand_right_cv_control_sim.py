@@ -70,6 +70,10 @@ class ArmControlViewer:
 
         if not glfw.init():
             raise RuntimeError("GLFW initialization failed")
+        # GLFW window hints persist across create_window calls. An offscreen
+        # mujoco.Renderer (--save-videos) may have set VISIBLE=0 beforehand,
+        # which would otherwise make this window invisible.
+        glfw.default_window_hints()
         monitor = glfw.get_primary_monitor()
         mode = glfw.get_video_mode(monitor) if monitor is not None else None
         width = min(1400, mode.size.width) if mode is not None else 1280
@@ -80,6 +84,12 @@ class ArmControlViewer:
         if self.window is None:
             glfw.terminate()
             raise RuntimeError("Could not create the MuJoCo GLFW window")
+        # Center the window and request focus so it is not left hidden behind
+        # a maximized terminal window.
+        pos_x = max(0, (mode.size.width - width) // 2) if mode is not None else 60
+        pos_y = max(0, (mode.size.height - height) // 2) if mode is not None else 60
+        glfw.set_window_pos(self.window, pos_x, pos_y)
+        glfw.focus_window(self.window)
         glfw.make_context_current(self.window)
         glfw.swap_interval(1)
 

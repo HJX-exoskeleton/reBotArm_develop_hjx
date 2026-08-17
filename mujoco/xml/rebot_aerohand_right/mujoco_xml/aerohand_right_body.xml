@@ -7,6 +7,9 @@
 <!--      <geom name="tetheria_mount_collision_0" size="0.002 0.025 0.005" pos="0.0405 0.02 0.009" quat="0.57346234 0 0.81923192 0" type="box"/>-->
 <!--      <geom name="tetheria_mount_collision_1" size="0.005 0.010 0.005" pos="0.045 0.053 0.002" quat="0.4987168 0.64994038 -0.34910175 0.45495826" type="box"/>-->
   <site name="grasp_site" pos="0.11 0.0 0.03" group="4"/>
+
+  <camera name="cam_wrist" pos="-0.085 -0.25 0" fovy="20" mode="fixed" euler="1.57 -0.8 -1.57"/>
+
   <body name="palm" pos="0.04 0.01 -0.015" quat="0.4056 -0.5792 0.5792 -0.4056">
     <geom type="mesh" class="visual" mesh="right_frame_link"/>
     <geom name="palm_collision_1" size="0.006 0.006 0.006" pos="0.031 -0.0045 0.096" quat="-0.5 -0.5 -0.5 0.5" type="box"/>

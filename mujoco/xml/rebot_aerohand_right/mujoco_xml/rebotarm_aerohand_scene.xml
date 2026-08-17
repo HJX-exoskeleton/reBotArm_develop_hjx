@@ -51,6 +51,9 @@
 
     <!-- Camera target placed between the initial cube and goal region. -->
     <body name="task_camera_focus" pos="0.40 0.01 0.09"/>
+    <!-- Overhead-camera target centered on the tabletop (1.20 x 0.90 m desk
+         centered at world x=0.20, top surface z=0). -->
+    <body name="top_camera_focus" pos="0.20 0 0"/>
     <site name="workspace_center" pos="0.40 0.01 0.001" type="sphere"
           size="0.006" rgba="1 0 0 0"/>
 
@@ -60,8 +63,11 @@
             mode="targetbody" target="task_camera_focus"/>
     <camera name="front" pos="0.95 0 0.50" fovy="55"
             mode="targetbody" target="task_camera_focus"/>
-    <camera name="top" pos="0.32 0 1.10" fovy="52"
-            mode="targetbody" target="task_camera_focus"/>
+    <!-- True overhead view centered on the tabletop: XY is aligned with the
+         world frame so the tabletop edges are not skewed by an oblique target
+         direction, and the desk fills the frame symmetrically. -->
+    <camera name="top" pos="0.20 0 1.30" fovy="52"
+            mode="targetbody" target="top_camera_focus"/>
     <camera name="angle" pos="0.72 -0.58 0.62" fovy="58"
             mode="targetbody" target="task_camera_focus"/>
   </worldbody>

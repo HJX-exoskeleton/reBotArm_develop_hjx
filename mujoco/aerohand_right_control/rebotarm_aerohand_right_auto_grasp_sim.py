@@ -5,11 +5,23 @@ The scripted state machine approaches the cylinder with the thumb pointing up,
 rotates the thumb into opposition, closes the fingers, lifts the object, moves
 above the fixed target disk, lowers, and releases. The task succeeds only when
 MuJoCo reports contact between ``red_box`` and ``target_box``.
+
+运动与触觉可视化
+python rebotarm_aerohand_right_auto_grasp_sim.py --save-plots ./grasp_results --save-videos ./grasp_results
+
+无界面采集：
+python rebotarm_aerohand_right_auto_grasp_sim.py --headless --seed 1
+
+关闭仿真画面快速录制视频：
+python rebotarm_aerohand_right_auto_grasp_sim.py --save-videos ./grasp_results --no-viewer
+python rebotarm_aerohand_right_auto_grasp_sim.py --save-videos ./grasp_results --no-viewer --render-gpu nvidia
+
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +45,210 @@ class Stage:
 def smoothstep(value: float) -> float:
     value = float(np.clip(value, 0.0, 1.0))
     return value * value * (3.0 - 2.0 * value)
+
+
+class MotionRecorder:
+    """Collect task motion/contact telemetry and export diagnostic figures."""
+
+    tactile_names = ("thumb", "index", "middle", "ring", "pinky", "palm")
+    hand_names = ("index", "middle", "ring", "pinky", "thumb_abd", "thumb_1", "thumb_2")
+
+    def __init__(self, model, data, arm, hand, demo, sample_hz: float):
+        self.model, self.data = model, data
+        self.arm, self.hand, self.demo = arm, hand, demo
+        self.mj = teleop.hand_cv.mujoco
+        self.period = 1.0 / max(float(sample_hz), 1.0)
+        self.next_time = float(data.time)
+        self.rows: list[dict[str, np.ndarray | float | int]] = []
+        self.geom_region: dict[int, int] = {}
+        for geom_id in demo.hand_geoms:
+            body_id = int(model.geom_bodyid[geom_id])
+            body_name = self.mj.mj_id2name(model, self.mj.mjtObj.mjOBJ_BODY, body_id) or ""
+            lowered = body_name.lower()
+            keys = ("thumb", "index", "middle", "ring", "pinky")
+            region = next((i for i, key in enumerate(keys) if key in lowered), 5)
+            self.geom_region[geom_id] = region
+
+    def sample(self) -> None:
+        if float(self.data.time) + 1e-12 < self.next_time:
+            return
+        self.next_time = float(self.data.time) + self.period
+        normal = np.zeros(6)
+        tangent = np.zeros(6)
+        count = np.zeros(6)
+        penetration = np.zeros(6)
+        wrench = np.zeros(6)
+        for contact_id in range(self.data.ncon):
+            contact = self.data.contact[contact_id]
+            g1, g2 = int(contact.geom1), int(contact.geom2)
+            hand_geom = g1 if g1 in self.geom_region and g2 == self.demo.object_geom else (
+                g2 if g2 in self.geom_region and g1 == self.demo.object_geom else -1
+            )
+            if hand_geom < 0:
+                continue
+            region = self.geom_region[hand_geom]
+            self.mj.mj_contactForce(self.model, self.data, contact_id, wrench)
+            normal[region] += abs(float(wrench[0]))
+            tangent[region] += float(np.linalg.norm(wrench[1:3]))
+            count[region] += 1.0
+            penetration[region] = max(penetration[region], max(0.0, -float(contact.dist)))
+
+        tool_pos, _ = self.arm._tool_pose(self.data)
+        object_rot = self.data.xmat[self.demo.object_body].reshape(3, 3)
+        tilt = np.degrees(np.arccos(np.clip(object_rot[2, 2], -1.0, 1.0)))
+        stage = min(self.demo.stage_index, len(self.demo.stages) - 1)
+        self.rows.append({
+            "time": float(self.data.time), "stage": stage,
+            "arm_q": self.data.qpos[self.arm.qpos_adr].copy(),
+            "arm_v": self.data.qvel[self.arm.dof_adr].copy(),
+            "arm_ctrl": self.data.ctrl[self.arm.actuator_ids].copy(),
+            "hand_ctrl": self.data.ctrl[self.hand.ids].copy(),
+            "hand_length": self.data.actuator_length[self.hand.ids].copy(),
+            "tool_pos": tool_pos,
+            "object_pos": self.data.xpos[self.demo.object_body].copy(),
+            "object_tilt": float(tilt),
+            "normal": normal, "tangent": tangent, "count": count,
+            "penetration": penetration,
+        })
+
+    def save(self, output_dir: Path) -> None:
+        if not self.rows:
+            print("[Plots] no samples collected")
+            return
+        output_dir.mkdir(parents=True, exist_ok=True)
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        keys = self.rows[0].keys()
+        arrays = {key: np.asarray([row[key] for row in self.rows]) for key in keys}
+        t = arrays["time"] - arrays["time"][0]
+        stage_ids = arrays["stage"].astype(int)
+
+        def decorate(axes, title: str) -> None:
+            axes = np.atleast_1d(axes)
+            changes = np.flatnonzero(np.diff(stage_ids) != 0) + 1
+            bounds = np.r_[0, changes, len(t)]
+            for ax in axes:
+                for band in range(len(bounds) - 1):
+                    if band % 2:
+                        ax.axvspan(t[bounds[band]], t[bounds[band + 1] - 1], color="0.92", zorder=0)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlabel("Time [s]")
+            axes[0].set_title(title)
+            for left, right in zip(bounds[:-1], bounds[1:]):
+                stage_id = int(stage_ids[left])
+                midpoint = 0.5 * (t[left] + t[right - 1])
+                axes[0].text(
+                    midpoint, 0.98, self.demo.stages[stage_id].name,
+                    transform=axes[0].get_xaxis_transform(), rotation=90,
+                    ha="right", va="top", fontsize=6, alpha=0.65,
+                )
+
+        arm_labels = [f"J{i}" for i in range(1, 7)]
+        fig, axes = plt.subplots(3, 1, figsize=(14, 11), sharex=True)
+        axes[0].plot(t, np.degrees(arrays["arm_q"])); axes[0].set_ylabel("Position [deg]")
+        axes[1].plot(t, np.degrees(arrays["arm_v"])); axes[1].set_ylabel("Velocity [deg/s]")
+        axes[2].plot(t, np.degrees(arrays["arm_ctrl"])); axes[2].set_ylabel("Command [deg]")
+        axes[0].legend(arm_labels, ncol=6, loc="upper center")
+        decorate(axes, "reBot 6-DOF Arm Motion (shaded bands = task stages)")
+        fig.tight_layout(); fig.savefig(output_dir / "arm_motion_curves.png", dpi=180); plt.close(fig)
+
+        fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+        axes[0].plot(t, arrays["hand_ctrl"]); axes[0].set_ylabel("Actuator command")
+        axes[1].plot(t, arrays["hand_length"]); axes[1].set_ylabel("Actual actuator length")
+        axes[0].legend(self.hand_names, ncol=4, loc="upper center")
+        decorate(axes, "AeroHand Command and Measured Actuator Motion")
+        fig.tight_layout(); fig.savefig(output_dir / "hand_motion_curves.png", dpi=180); plt.close(fig)
+
+        fig, axes = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
+        axes[0].plot(t, arrays["normal"]); axes[0].set_ylabel("Normal force [N]")
+        axes[1].plot(t, arrays["tangent"]); axes[1].set_ylabel("Tangential force [N]")
+        axes[2].plot(t, arrays["count"]); axes[2].set_ylabel("Contact points")
+        axes[3].plot(t, 1000.0 * arrays["penetration"]); axes[3].set_ylabel("Penetration [mm]")
+        axes[0].legend(self.tactile_names, ncol=6, loc="upper center")
+        decorate(axes, "Hand-Cylinder Tactile Contact Visualization")
+        fig.tight_layout(); fig.savefig(output_dir / "hand_tactile_contacts.png", dpi=180); plt.close(fig)
+
+        fig, axes = plt.subplots(3, 1, figsize=(14, 10))
+        axes[0].plot(t, arrays["tool_pos"]); axes[0].set_ylabel("Tool XYZ [m]")
+        axes[0].legend(("X", "Y", "Z"), ncol=3)
+        axes[1].plot(t, arrays["object_pos"]); axes[1].set_ylabel("Cylinder XYZ [m]")
+        axes[1].legend(("X", "Y", "Z"), ncol=3)
+        axes[2].plot(t, arrays["object_tilt"], color="tab:red"); axes[2].set_ylabel("Cylinder tilt [deg]")
+        decorate(axes, "End-Effector and Cylinder Task Trajectory")
+        fig.tight_layout(); fig.savefig(output_dir / "task_trajectory.png", dpi=180); plt.close(fig)
+
+        np.savez_compressed(output_dir / "motion_and_tactile_data.npz", **arrays)
+        print(f"[Plots] saved 4 figures and raw NPZ data to {output_dir.resolve()}")
+
+
+class VideoRecorder:
+    """Render selected MuJoCo cameras to independent MP4 files."""
+
+    camera_names = ("cam_wrist", "top", "angle")
+
+    def __init__(self, model, data, output_dir: Path, fps: float, width: int, height: int,
+                 shadow_size: int | None = None):
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("--save-videos requires OpenCV (cv2)") from exc
+        self.cv2 = cv2
+        self.model, self.data = model, data
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.fps = max(float(fps), 1.0)
+        self.period = 1.0 / self.fps
+        self.next_time = float(data.time)
+        if shadow_size is not None:
+            # Visual-only setting: shrinking the shadow map (or disabling it)
+            # roughly halves the per-frame render cost of the offscreen
+            # renderer without affecting dynamics.
+            model.vis.quality.shadowsize = shadow_size
+            if shadow_size == 0:
+                print("[Videos] shadow maps disabled for recording speed")
+        self.renderer = teleop.hand_cv.mujoco.Renderer(model, height=height, width=width)
+        self.writers = {}
+        self.frames = {}
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        for name in self.camera_names:
+            cam_id = teleop.hand_cv.mujoco.mj_name2id(
+                model, teleop.hand_cv.mujoco.mjtObj.mjOBJ_CAMERA, name
+            )
+            if cam_id < 0:
+                print(f"[Videos] camera {name!r} not found; skipping")
+                continue
+            path = self.output_dir / f"{name}.mp4"
+            writer = cv2.VideoWriter(str(path), fourcc, self.fps, (width, height))
+            if not writer.isOpened():
+                raise RuntimeError(f"Unable to open video writer: {path}")
+            self.writers[name] = writer
+            self.frames[name] = 0
+        if not self.writers:
+            self.renderer = None
+            raise RuntimeError("None of cam_wrist, top, angle exists in the loaded model")
+        print(f"[Videos] recording {', '.join(self.writers)} at {self.fps:g} FPS")
+
+    def sample(self) -> None:
+        if float(self.data.time) + 1e-12 < self.next_time:
+            return
+        self.next_time = float(self.data.time) + self.period
+        for name, writer in self.writers.items():
+            self.renderer.update_scene(self.data, camera=name)
+            rgb = np.asarray(self.renderer.render())
+            writer.write(self.cv2.cvtColor(rgb, self.cv2.COLOR_RGB2BGR))
+            self.frames[name] += 1
+
+    def close(self) -> None:
+        for writer in self.writers.values():
+            writer.release()
+        # mujoco.Renderer releases its GL context when garbage-collected; the
+        # installed MuJoCo versions do not expose a public close() method.
+        self.renderer = None
+        if self.frames:
+            summary = ", ".join(f"{name}={count} frames" for name, count in self.frames.items())
+            print(f"[Videos] saved MP4 files to {self.output_dir.resolve()} ({summary})")
 
 
 class AutoGraspDemo:
@@ -364,18 +580,61 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-joint-step", type=float, default=0.02)
     parser.add_argument("--arm-gravcomp", type=float, default=1.0)
     parser.add_argument("--realtime-factor", type=float, default=1.0)
-    parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--headless", action="store_true",
+                        help="run without the MuJoCo viewer window")
+    parser.add_argument(
+        "--no-viewer", action="store_true",
+        help="close the MuJoCo viewer window and run the simulation as fast "
+             "as possible; recommended with --save-videos for quicker "
+             "recording (same behavior as --headless)",
+    )
     parser.add_argument("--stay-open", action="store_true",
                         help="keep viewer open after success/failure")
     parser.add_argument("--seed", type=int, default=None,
                         help="random seed for cylinder initialization")
     parser.add_argument("--object-random-radius", type=float, default=0.025,
                         help="maximum cylinder XY offset in metres")
+    parser.add_argument(
+        "--save-plots", "--plot-dir", dest="save_plots", type=Path, default=None,
+        help="directory for arm, hand, trajectory and tactile PNG plots",
+    )
+    parser.add_argument("--plot-sample-hz", type=float, default=100.0,
+                        help="telemetry sampling rate used by --save-plots")
+    parser.add_argument(
+        "--save-videos", type=Path, default=None,
+        help="directory for cam_wrist/top/angle MP4 recordings",
+    )
+    parser.add_argument("--video-fps", type=float, default=30.0,
+                        help="camera video frame rate used by --save-videos")
+    parser.add_argument("--video-width", type=int, default=640,
+                        help="camera video width in pixels")
+    parser.add_argument("--video-height", type=int, default=480,
+                        help="camera video height in pixels")
+    parser.add_argument(
+        "--video-shadow-size", type=int, default=None,
+        help="shadow map size used when rendering video frames; default is "
+             "the model setting, but 0 (no shadow maps, ~2x faster) is used "
+             "automatically with --headless/--no-viewer",
+    )
+    parser.add_argument(
+        "--render-gpu", choices=("nvidia",), default=None,
+        help="render video frames on the NVIDIA GPU via PRIME offload "
+             "(requires an NVIDIA driver); speeds up recording on "
+             "hybrid-GPU machines, recommended with --no-viewer",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    # --no-viewer is an alias of --headless: both skip the viewer window and
+    # advance the simulation as fast as the CPU allows.
+    if args.no_viewer:
+        args.headless = True
+    # Must run before any GL context is created (viewer or offscreen renderer).
+    if args.render_gpu == "nvidia":
+        os.environ["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+        os.environ["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
     mj = teleop.hand_cv.mujoco
     model_path = teleop.hand_cv.resolve_model_path(args.model)
     if not model_path.is_file():
@@ -409,6 +668,21 @@ def main() -> int:
     )
     hand = teleop.hand_cv.SimHandMapper(model)
     demo = AutoGraspDemo(model, data, arm, hand, args.speed)
+    recorder = (
+        MotionRecorder(model, data, arm, hand, demo, args.plot_sample_hz)
+        if args.save_plots is not None else None
+    )
+    video_shadow = args.video_shadow_size
+    if video_shadow is None and args.headless:
+        # No interactive viewer competes for the GL context in headless mode,
+        # so disable shadow maps to roughly halve video render time.
+        video_shadow = 0
+    video_recorder = (
+        VideoRecorder(model, data, args.save_videos, args.video_fps,
+                      args.video_width, args.video_height,
+                      shadow_size=video_shadow)
+        if args.save_videos is not None else None
+    )
     hand.write(data, hand.open_ctrl)
     mj.mj_forward(model, data)
 
@@ -426,13 +700,20 @@ def main() -> int:
         demo.apply_carry_upright_stabilization()
         mj.mj_step(model, data)
         demo.monitor_safety_contacts()
+        if recorder is not None:
+            recorder.sample()
+        if video_recorder is not None:
+            video_recorder.sample()
 
     viewer_context = (
         teleop.ArmControlViewer(model, data, lambda _key: None)
         if not args.headless else None
     )
+    failure_notice_printed = False
     try:
         viewer = viewer_context.__enter__() if viewer_context is not None else None
+        if viewer is not None:
+            print("[Viewer] window opened (ESC to close)")
         wall_start = time.perf_counter()
         sim_start = float(data.time)
         while viewer is None or viewer.is_running():
@@ -453,12 +734,28 @@ def main() -> int:
                 if steps == 0:
                     time.sleep(0.001)
 
-            if demo.finished and (args.headless or not args.stay_open):
-                # Let the released object settle briefly before returning.
-                if data.time - demo.stage_start_time > 0.25:
-                    break
+            if demo.finished and not args.stay_open:
+                if args.headless or demo.success:
+                    # Let the released object settle briefly before returning.
+                    if data.time - demo.stage_start_time > 0.25:
+                        break
+                elif not failure_notice_printed:
+                    # Keep the viewer open on failure so the scene can be
+                    # inspected; closing the window exits with code 1.
+                    print(
+                        "[Viewer] task failed - window stays open for "
+                        "inspection; press ESC to exit"
+                    )
+                    failure_notice_printed = True
         return 0 if demo.success else 1
     finally:
+        if recorder is not None:
+            recorder.save(args.save_plots)
+        if video_recorder is not None:
+            video_recorder.close()
+        # Terminate GLFW last: the VideoRecorder's offscreen mujoco.Renderer
+        # shares process-wide libglfw state with the viewer, so its GL context
+        # must be released before glfw.terminate() runs.
         if viewer_context is not None:
             viewer_context.__exit__(None, None, None)
 
