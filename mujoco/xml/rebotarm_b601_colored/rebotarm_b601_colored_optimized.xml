@@ -70,6 +70,7 @@
 
     <!-- floor -->
     <texture builtin="checker" height="100" name="texplane" rgb1="0.6 0.6 0.6" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+<!--    <texture builtin="checker" height="100" name="texplane" rgb1="0.9 0.9 0.9" rgb2="0.9 0.9 0.9" type="2d" width="100"/>-->
     <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
     <!-- 设置天空盒纹理 -->
     <texture type="skybox" file="meshes/desert.png" gridsize="3 4" gridlayout=".U..LFRB.D.." />
