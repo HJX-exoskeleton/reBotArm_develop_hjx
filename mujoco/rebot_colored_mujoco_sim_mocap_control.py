@@ -20,7 +20,7 @@ except Exception as exc:  # Mink 可能被 qpsolvers/JAX 的版本冲突阻断�
 
 # ================= 系统参数配置 =================
 ROOT_DIR = Path(__file__).resolve().parents[1]
-XML_PATH = str(ROOT_DIR / "mujoco" / "xml" / "rebotarm_b601_colored" / "sim_rebotarm_grasp.xml")
+XML_PATH = str(ROOT_DIR / "mujoco" / "xml" / "rebotarm_b601_colored" / "sim_rebotarm_colored_grasp.xml")
 
 CTRL_FREQ = 200
 dt = 1.0 / CTRL_FREQ
