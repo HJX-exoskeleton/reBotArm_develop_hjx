@@ -84,14 +84,26 @@ class RebotArmSimulation:
             raise ValueError(f"Invalid actuator ranges: {self.ctrl_min} .. {self.ctrl_max}")
         left_range = self.model.jnt_range[self.left_finger_joint_id]
         right_range = self.model.jnt_range[self.right_finger_joint_id]
-        if not (
-            np.isclose(self.ctrl_min[6], left_range[0])
-            and np.isclose(self.ctrl_max[6], left_range[1])
-            and np.isclose(right_range[0], -left_range[1])
-            and np.isclose(right_range[1], -left_range[0])
-        ):
+        # The equality constraint commands q_right = -q_left. Joint ranges may
+        # contain extra tolerance (the current right upper limit is +1 mm), so
+        # require containment of the commanded interval rather than exact,
+        # endpoint-for-endpoint symmetry.
+        tolerance = 1e-9
+        left_required = (float(self.ctrl_min[6]), float(self.ctrl_max[6]))
+        right_required = (-float(self.ctrl_max[6]), -float(self.ctrl_min[6]))
+        left_contains_control = (
+            left_range[0] <= left_required[0] + tolerance
+            and left_range[1] >= left_required[1] - tolerance
+        )
+        right_contains_mirror = (
+            right_range[0] <= right_required[0] + tolerance
+            and right_range[1] >= right_required[1] - tolerance
+        )
+        if not (left_contains_control and right_contains_mirror):
             raise ValueError(
-                "Gripper actuator and symmetric finger joint ranges are inconsistent"
+                "Gripper control range is not contained by the synchronized finger ranges: "
+                f"control={left_required}, left={left_range.tolist()}, "
+                f"required_right={right_required}, right={right_range.tolist()}"
             )
 
     def _named_id(self, object_type: mujoco.mjtObj, name: str) -> int:

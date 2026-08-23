@@ -82,42 +82,8 @@
   </default>
 
   <worldbody>
-    <!-- light -->
+
 <!--    <light name="key_light" pos="0.45 -0.65 1.3" dir="-0.45 0.65 -1"/>-->
-    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="-1 -1 1" dir="1 1 -1"/>
-    <light directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="1 -1 1" dir="-1 1 -1"/>
-    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="0 1 1" dir="0 -1 -1"/>
-    <!-- floor -->
-<!--    <geom name="floor" type="plane" size="1.0 1.0 0.02" material="floor_mat"/>-->
-    <body name="floor" pos="0 0 0">
-      <geom friction="1.0 .1 .1" material="MatPlane" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>
-    </body>
-
-    <camera name="overhead_rgb" mode="fixed" pos="0.42 0 0.86" xyaxes="1 0 0 0 1 0" fovy="50"/>
-
-    <body name="task_table" pos="0.42 0 0.015">
-      <geom name="task_table_top" type="box" size="0.30 0.26 0.015" material="table_mat" contype="1" conaffinity="1" condim="6" friction="2.2 0.12 0.02" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
-      <geom name="task_pick_zone" type="box" pos="0 -0.13 0.0132" size="0.285 0.12 0.002" material="pick_zone_mat" contype="0" conaffinity="0"/>
-      <geom name="task_place_zone" type="box" pos="0 0.13 0.0132" size="0.285 0.12 0.002" material="place_zone_mat" contype="0" conaffinity="0"/>
-    </body>
-
-<!--    <body name="red_cube" pos="0.34 -0.13 0.055">-->
-<!--      <freejoint/>-->
-<!--      <geom type="box" size="0.025 0.025 0.025" material="object_red_mat" contype="1" conaffinity="1" condim="6" mass="0.04" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>-->
-<!--    </body>-->
-<!--    <body name="blue_block" pos="0.50 0.11 0.048">-->
-<!--      <freejoint/>-->
-<!--      <geom type="box" size="0.045 0.022 0.018" material="object_blue_mat" contype="1" conaffinity="1" condim="6" mass="0.05" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>-->
-<!--    </body>-->
-    <body name="yellow_cylinder" pos="0.44 -0.02 0.065">
-      <freejoint/>
-      <geom type="cylinder" size="0.022 0.035" material="object_yellow_mat" contype="1" conaffinity="1" condim="6" mass="0.04" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
-    </body>
-
-    <body name="ik_target" mocap="true" pos="0.34 0 0.1917">
-      <geom name="ik_target_sphere" type="sphere" size="0.025" material="target_mat" contype="0" conaffinity="0"/>
-      <site name="ik_target_site" pos="0 0 0" size="0.005" rgba="1 0.55 0.12 0.0"/>
-    </body>
 
     <body name="base_link" pos="0 0 0">
       <inertial pos="-0.000007849 -0.0000011531 0.029841" mass="0.8366" diaginertia="0.00133040 0.00213119 0.00275877"/>
@@ -179,8 +145,16 @@
                     <!-- Effective grasp center between the front halves of both fingers. -->
                     <site name="grasp_center" pos="-0.02 0 0" type="sphere" size="0.002" rgba="0.10 1.00 0.35 0.25"/>
 
-                    <body name="finger_left_link" pos="0 0.002 0">
-                      <joint name="finger_left" type="slide" axis="0 1 0" range="0 0.0485" damping="18.0"/>
+                    <camera name="cam_wrist" pos="-0.1 0 0.11" fovy="50" mode="fixed" euler="0 -0.985 -1.5707" />
+
+                    <!-- New add eef_trace_site -->
+                    <body name="gripper_eef_trace_site" pos="-0.02 0 0" euler="0 0 0">
+                      <geom contype="0" conaffinity="0" size="0.004" type="sphere" rgba="0.2 0.2 0.2 0.2"/>
+                      <site name="eef_trace_site" pos="0.0 0 0" size="0.004" rgba="1 0.5 0 0.1" type="sphere"/>
+                    </body>
+
+                    <body name="finger_left_link" pos="0 0.00 0">
+                      <joint name="finger_left" type="slide" axis="0 1 0" range="0.001 0.05" damping="18.0"/>
                       <inertial pos="0 0 0" mass="0.03" diaginertia="0.00001 0.00001 0.00001"/>
                       <geom name="finger_left_body_visual" type="mesh" mesh="finger_left_body_mesh" material="matte_black_mat"/>
                       <geom name="finger_left_carriage_visual" type="mesh" mesh="finger_left_carriage_mesh" material="gripper_grey_mat"/>
@@ -190,8 +164,8 @@
                       <geom name="finger_left_rear_collision" type="box" pos="-0.030 0.0071 0" size="0.030 0.007 0.020" rgba="0.18 0.22 0.21 0.0" contype="1" conaffinity="1" condim="6" mass="0.006" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
                     </body>
 
-                    <body name="finger_right_link" pos="0 -0.002 0">
-                      <joint name="finger_right" type="slide" axis="0 1 0" range="-0.0485 0" damping="18.0"/>
+                    <body name="finger_right_link" pos="0 -0.00 0">
+                      <joint name="finger_right" type="slide" axis="0 1 0" range="-0.05 0.001" damping="18.0"/>
                       <inertial pos="0 0 0" mass="0.03" diaginertia="0.00001 0.00001 0.00001"/>
                       <geom name="finger_right_body_visual" type="mesh" mesh="finger_right_body_mesh" material="matte_black_mat"/>
                       <geom name="finger_right_carriage_visual" type="mesh" mesh="finger_right_carriage_mesh" material="gripper_grey_mat"/>
@@ -212,11 +186,10 @@
 
   <!-- Keep both fingers mechanically synchronized: finger_right = -finger_left. -->
   <equality>
-    <joint name="gripper_symmetry" joint1="finger_right" joint2="finger_left"
-           polycoef="0 -1 0 0 0" solref="0.002 1" solimp="0.99 0.999 0.0001"/>
+    <joint name="gripper_symmetry" joint1="finger_right" joint2="finger_left" polycoef="0 -1 0 0 0" solref="0.002 1" solimp="0.99 0.999 0.0001"/>
   </equality>
 
-  <!-- This tendon coordinate equals one finger's travel (0..0.0485 m). -->
+  <!-- This tendon coordinate equals one finger's travel (0..0.05 m). -->
   <tendon>
     <fixed name="gripper_opening">
       <joint joint="finger_left" coef="0.5"/>
@@ -233,8 +206,7 @@
     <position name="joint5_position" joint="joint5" kp="38" ctrllimited="true" ctrlrange="-1.57 1.57" forcelimited="true" forcerange="-30 30"/>
     <position name="joint6_position" joint="joint6" kp="28" ctrllimited="true" ctrlrange="-3.14 3.14" forcelimited="true" forcerange="-30 30"/>
     <!-- Coefficients halve force per finger, hence kp=3600 and actuator limit=64 N. -->
-    <position name="gripper_position" tendon="gripper_opening" kp="3600"
-              ctrllimited="true" ctrlrange="0 0.0485"
-              forcelimited="true" forcerange="-64 64"/>
+    <position name="gripper_position" tendon="gripper_opening" kp="3600" ctrllimited="true" ctrlrange="0.001 0.05" forcelimited="true" forcerange="-64 64"/>
   </actuator>
+
 </mujoco>
