@@ -39,7 +39,7 @@ class Waypoint:
 
 
 def default_model_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "xml" / "rebotarm_b601_colored" / "rebotarm_b601_colored_optimized.xml"
+    return Path(__file__).resolve().parents[1] / "xml" / "rebotarm_b601_colored" / "sim_rebotarm_colored_grasp.xml"
 
 
 class RebotArmSimulation:
