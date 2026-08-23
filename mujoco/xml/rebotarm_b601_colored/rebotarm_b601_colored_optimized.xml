@@ -171,7 +171,7 @@
                       <geom name="finger_left_travel_stop_visual" type="mesh" mesh="finger_left_travel_stop_mesh" material="seeed_yellow_mat"/>
                       <geom name="finger_left_crossed_rack_visual" type="mesh" mesh="finger_left_crossed_rack_mesh" material="silver_trim_mat"/>
                       <geom name="finger_left_collision" type="box" pos="-0.105 0.0071 0" size="0.045 0.007 0.020" rgba="0.18 0.22 0.21 0.0" contype="1" conaffinity="1" condim="6" mass="0.01" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
-                      <geom name="finger_left_rear_collision" type="box" pos="-0.030 0.0071 0" size="0.030 0.007 0.020" rgba="0.18 0.22 0.21 0.10" contype="1" conaffinity="1" condim="6" mass="0.006" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
+                      <geom name="finger_left_rear_collision" type="box" pos="-0.030 0.0071 0" size="0.030 0.007 0.020" rgba="0.18 0.22 0.21 0.0" contype="1" conaffinity="1" condim="6" mass="0.006" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
                     </body>
 
                     <body name="finger_right_link" pos="0 -0.002 0">
@@ -182,7 +182,7 @@
                       <geom name="finger_right_travel_stop_visual" type="mesh" mesh="finger_right_travel_stop_mesh" material="seeed_yellow_mat"/>
                       <geom name="finger_right_crossed_rack_visual" type="mesh" mesh="finger_right_crossed_rack_mesh" material="silver_trim_mat"/>
                       <geom name="finger_right_collision" type="box" pos="-0.105 -0.0071 0" size="0.045 0.007 0.020" rgba="0.18 0.22 0.21 0.0" contype="1" conaffinity="1" condim="6" mass="0.01" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
-                      <geom name="finger_right_rear_collision" type="box" pos="-0.030 -0.0071 0" size="0.030 0.007 0.020" rgba="0.18 0.22 0.21 0.10" contype="1" conaffinity="1" condim="6" mass="0.006" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
+                      <geom name="finger_right_rear_collision" type="box" pos="-0.030 -0.0071 0" size="0.030 0.007 0.020" rgba="0.18 0.22 0.21 0.0" contype="1" conaffinity="1" condim="6" mass="0.006" friction="6.0 0.25 0.04" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
                     </body>
                   </body>
                 </body>
