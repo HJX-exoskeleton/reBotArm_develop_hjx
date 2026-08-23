@@ -67,6 +67,12 @@
     <material name="object_blue_mat" rgba="0.04 0.75 0.95 1"/>
     <material name="object_yellow_mat" rgba="0.98 0.82 0.08 1"/>
     <material name="target_mat" rgba="1.00 0.55 0.12 0"/>
+
+    <!-- floor -->
+    <texture builtin="checker" height="100" name="texplane" rgb1="0.6 0.6 0.6" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
+    <!-- 设置天空盒纹理 -->
+    <texture type="skybox" file="meshes/desert.png" gridsize="3 4" gridlayout=".U..LFRB.D.." />
   </asset>
 
   <default>
@@ -75,9 +81,19 @@
   </default>
 
   <worldbody>
-    <light name="key_light" pos="0.45 -0.65 1.3" dir="-0.45 0.65 -1"/>
+<!--    <light name="key_light" pos="0.45 -0.65 1.3" dir="-0.45 0.65 -1"/>-->
+<!--    <geom name="floor" type="plane" size="1.0 1.0 0.02" material="floor_mat"/>-->
+
+    <!-- light -->
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="-1 -1 1" dir="1 1 -1"/>
+    <light directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="1 -1 1" dir="-1 1 -1"/>
+    <light castshadow="false" directional="true" diffuse=".3 .3 .3" specular="0.3 0.3 0.3" pos="0 1 1" dir="0 -1 -1"/>
+    <!-- floor -->
+    <body name="floor" pos="0 0 0">
+      <geom friction="1.0 .1 .1" material="MatPlane" name="floor" pos="0 0 0.0" size="30 30 0.125" type="plane" condim="3" conaffinity="1"/>
+    </body>
+
     <camera name="overhead_rgb" mode="fixed" pos="0.42 0 0.86" xyaxes="1 0 0 0 1 0" fovy="50"/>
-    <geom name="floor" type="plane" size="1.0 1.0 0.02" material="floor_mat"/>
 
     <body name="task_table" pos="0.42 0 0.015">
       <geom name="task_table_top" type="box" size="0.30 0.26 0.015" material="table_mat" contype="1" conaffinity="1" condim="6" friction="2.2 0.12 0.02" solref="0.003 1" solimp="0.98 0.995 0.0005"/>
