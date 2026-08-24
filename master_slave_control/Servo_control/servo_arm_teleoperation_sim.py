@@ -64,7 +64,8 @@ signal.signal(signal.SIGTERM, _sigint_handler)
 
 
 # ================= 2. 默认路径与串口 =================
-DEFAULT_XML = current_dir / "xml" / "rebot_gripper" / "sim_reBot_grasp.xml"
+# DEFAULT_XML = current_dir / "xml" / "rebot_gripper" / "sim_reBot_grasp.xml"
+DEFAULT_XML = "/home/hjx/hjx_file/rebot_devarm_ws/reBotArm_develop_hjx/mujoco/xml/rebotarm_b601_colored/sim_rebotarm_colored_grasp.xml"
 
 if os.name == "nt":
     DEFAULT_PORT = "COM6"
@@ -77,7 +78,7 @@ ARM_SERVO_IDS = [1, 2, 3, 4, 5, 6]
 GRIPPER_SERVO_ID = 7
 
 ARM_JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]
-GRIPPER_ACTUATOR_NAME = "gripper"
+GRIPPER_ACTUATOR_NAME = "gripper_position"  # old: gripper
 
 ARM_DOF = len(ARM_SERVO_IDS)
 
